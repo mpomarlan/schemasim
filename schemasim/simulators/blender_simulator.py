@@ -616,9 +616,9 @@ class BlenderSimulator(simulator.Simulator):
                     retq = retq + "obj.keyframe_insert(data_path='location', frame=2)\n"
                     retq = retq + "obj.keyframe_insert(data_path='rotation_quaternion', frame=2)\n"
                 elif has_trajectory and (2 in trajectories[o._parameters["name"]]):
-                    x = trajectories[o._parameters["name"]][2]["tx"]
-                    y = trajectories[o._parameters["name"]][2]["ty"]
-                    z = trajectories[o._parameters["name"]][2]["tz"]
+                    x = trajectories[o._parameters["name"]][2]["x"]
+                    y = trajectories[o._parameters["name"]][2]["y"]
+                    z = trajectories[o._parameters["name"]][2]["z"]
                     qw = trajectories[o._parameters["name"]][2]["rw"]
                     qx = trajectories[o._parameters["name"]][2]["rx"]
                     qy = trajectories[o._parameters["name"]][2]["ry"]
@@ -639,9 +639,9 @@ class BlenderSimulator(simulator.Simulator):
                             retq = retq + ("obj.location = (%f,%f,%f)\n" % (p["tx"]+dt*p["vx"], p["ty"]+dt*p["vy"], p["tz"]+dt*p["vz"]))
                             retq = retq + "obj.keyframe_insert(data_path='location', frame=2)\n"
                         elif has_trajectory and (2 in trajectories[pname]):
-                            x = trajectories[o._parameters["name"]][2]["tx"]
-                            y = trajectories[o._parameters["name"]][2]["ty"]
-                            z = trajectories[o._parameters["name"]][2]["tz"]
+                            x = trajectories[pname][2]["x"]
+                            y = trajectories[pname][2]["y"]
+                            z = trajectories[pname][2]["z"]
                             retq = retq + ("obj.location = (%f,%f,%f)\n" % (x,y,z))
                             retq = retq + "obj.keyframe_insert(data_path='location', frame=2)\n"
                         k = k + 1
@@ -674,9 +674,9 @@ class BlenderSimulator(simulator.Simulator):
                             retq = retq + ("scene.frame_current = %d\n" % f)
                             set_frame = True
                         retq = retq + ("obj = bpy.data.objects['%s']\n" % o._parameters["name"])
-                        x = trajectories[o._parameters["name"]][f]["tx"]
-                        y = trajectories[o._parameters["name"]][f]["ty"]
-                        z = trajectories[o._parameters["name"]][f]["tz"]
+                        x = trajectories[o._parameters["name"]][f]["x"]
+                        y = trajectories[o._parameters["name"]][f]["y"]
+                        z = trajectories[o._parameters["name"]][f]["z"]
                         qw = trajectories[o._parameters["name"]][f]["rw"]
                         qx = trajectories[o._parameters["name"]][f]["rx"]
                         qy = trajectories[o._parameters["name"]][f]["ry"]
@@ -694,9 +694,9 @@ class BlenderSimulator(simulator.Simulator):
                                 retq = retq + ("scene.frame_current = %d\n" % f)
                                 set_frame = True
                             retq = retq + ("obj = bpy.data.objects['%s']\n" % pname)
-                            x = trajectories[pname][f]["tx"]
-                            y = trajectories[pname][f]["ty"]
-                            z = trajectories[pname][f]["tz"]
+                            x = trajectories[pname][f]["x"]
+                            y = trajectories[pname][f]["y"]
+                            z = trajectories[pname][f]["z"]
                             qw = trajectories[pname][f]["rw"]
                             qx = trajectories[pname][f]["rx"]
                             qy = trajectories[pname][f]["ry"]
@@ -714,7 +714,8 @@ class BlenderSimulator(simulator.Simulator):
         retq = retq + ("    os.remove('%s')\n" % blender_outfile_path)
         retq = retq + ("bpy.ops.wm.save_as_mainfile(filepath='%s')\n\n" % blender_outfile_path)
         retq = retq + ("with open('%s', 'w') as outfile:\n" % blender_logfile_path)
-        retq = retq + "    for frame in range(1, scene.frame_end):\n"
+        retq = retq + "    outfile.write('{}\\n') # Blender frames are 1-indexed, so the 0 frame is empty.\n"
+        retq = retq + "    for frame in range(1, scene.frame_end+1):\n"
         retq = retq + "        scene.frame_set(frame)\n"
         retq = retq + "        frame_log = {}\n" 
         retq = retq + "        for o in bpy.data.objects:\n"

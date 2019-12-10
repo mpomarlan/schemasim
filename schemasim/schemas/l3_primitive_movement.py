@@ -27,7 +27,9 @@ class RelativeDepart(st.RoleDefiningSchema):
         normalMovement = math.sqrt(extents[0]*extents[0] + extents[1]*extents[1] + extents[2]*extents[2])
         if isinstance(self._roles["obj"], st.ParticleSystem):
             normalMovement = normalMovement*10
-        for f in list(range(len(frameData)+1)):
+        for f in list(range(len(frameData))):
+            if not frameData[f]:
+                continue
             ovolume = self._roles["obj"].getVolumeAtFrame(frameData, f)
             rvolume = self._roles["relatum"].getVolumeAtFrame(frameData, f)
             if not isinstance(ovolume, list):
@@ -80,7 +82,9 @@ class RelativeApproach(st.RoleDefiningSchema):
         normalMovement = math.sqrt(extents[0]*extents[0] + extents[1]*extents[1] + extents[2]*extents[2])
         if isinstance(self._roles["obj"], st.ParticleSystem):
             normalMovement = normalMovement*10
-        for f in list(range(len(frameData)+1)):
+        for f in list(range(len(frameData))):
+            if not frameData[f]:
+                continue
             ovolume = self._roles["obj"].getVolumeAtFrame(frameData, f)
             rvolume = self._roles["relatum"].getVolumeAtFrame(frameData, f)
             if not isinstance(ovolume, list):
@@ -133,7 +137,9 @@ class RelativeStillness(st.RoleDefiningSchema):
         normalMovement = math.sqrt(extents[0]*extents[0] + extents[1]*extents[1] + extents[2]*extents[2])
         if isinstance(self._roles["obj"], st.ParticleSystem):
             normalMovement = normalMovement*10
-        for f in list(range(len(frameData)+1)):
+        for f in list(range(len(frameData))):
+            if not frameData[f]:
+                continue
             ovolume = self._roles["obj"].getVolumeAtFrame(frameData, f)
             rvolume = self._roles["relatum"].getVolumeAtFrame(frameData, f)
             if not isinstance(ovolume, list):
@@ -183,7 +189,9 @@ class RelativeMovement(st.RoleDefiningSchema):
         normalMovement = math.sqrt(extents[0]*extents[0] + extents[1]*extents[1] + extents[2]*extents[2])
         if isinstance(self._roles["obj"], st.ParticleSystem):
             normalMovement = normalMovement*10
-        for f in list(range(len(frameData)+1)):
+        for f in list(range(len(frameData))):
+            if not frameData[f]:
+                continue
             ovolume = self._roles["obj"].getVolumeAtFrame(frameData, f)
             rvolume = self._roles["relatum"].getVolumeAtFrame(frameData, f)
             if not isinstance(ovolume, list):
@@ -233,7 +241,9 @@ class RelativeStayLevel(st.RoleDefiningSchema):
         normalMovement = extents[2]
         if isinstance(self._roles["obj"], st.ParticleSystem):
             normalMovement = normalMovement*10
-        for f in list(range(len(frameData)+1)):
+        for f in list(range(len(frameData))):
+            if not frameData[f]:
+                continue
             ovolume = self._roles["obj"].getVolumeAtFrame(frameData, f)
             rvolume = self._roles["relatum"].getVolumeAtFrame(frameData, f)
             if not isinstance(ovolume, list):
@@ -278,7 +288,9 @@ class RelativeFall(st.RoleDefiningSchema):
         normalMovement = extents[2]
         if isinstance(self._roles["obj"], st.ParticleSystem):
             normalMovement = normalMovement*10
-        for f in list(range(len(frameData)+1)):
+        for f in list(range(len(frameData))):
+            if not frameData[f]:
+                continue
             ovolume = self._roles["obj"].getVolumeAtFrame(frameData, f)
             rvolume = self._roles["relatum"].getVolumeAtFrame(frameData, f)
             if not isinstance(ovolume, list):

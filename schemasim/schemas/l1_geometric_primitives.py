@@ -254,7 +254,7 @@ class Interior(st.RoleDefiningSchema):
         if 0 == frame:
             return self.getVolume()
         volume = self._getVolumeInternal()
-        objectFrame = frameData[frame-1][self._roles["obj"].getId()]
+        objectFrame = frameData[frame][self._roles["obj"].getId()]
         t = [objectFrame["x"], objectFrame["y"], objectFrame["z"]]
         q = [objectFrame["rx"], objectFrame["ry"], objectFrame["rz"], objectFrame["rw"]]
         volume.apply_transform(poseFromTQ(t, q))

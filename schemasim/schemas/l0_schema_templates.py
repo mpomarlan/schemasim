@@ -84,11 +84,20 @@ class ParameterizedSchema(Schema):
         if 0 == frame:
             return self.getVolume()
         volume = self._getVolumeInternal()
-        objectFrame = frameData[frame-1][self.getId()]
+        objectFrame = frameData[frame][self.getId()]
         t = [objectFrame["x"], objectFrame["y"], objectFrame["z"]]
         q = [objectFrame["rx"], objectFrame["ry"], objectFrame["rz"], objectFrame["rw"]]
         volume.apply_transform(poseFromTQ(t, q))
         return volume
+    def getTrajectories(self, frameData):
+        name = self.getId()
+        trajectories = {name: {}}
+        k = 0
+        for f in frameData:
+            if name in f:
+                trajectories[name][k] = f[name]
+            k = k + 1
+        return trajectories
 
 class ParticleSystem(ParameterizedSchema):
     def __init__(self):
@@ -149,7 +158,7 @@ class ParticleSystem(ParameterizedSchema):
         if 0 == frame:
             return self.getVolume()
         basevolume = self._getVolumeInternal()
-        objectFrame = self._getFrameData(frameData[frame-1])
+        objectFrame = self._getFrameData(frameData[frame])
         volumes = []
         for p in objectFrame:
             volume = basevolume.copy()
@@ -158,6 +167,23 @@ class ParticleSystem(ParameterizedSchema):
             volume.apply_transform(poseFromTQ(t, q))
             volumes.append(volume)
         return volumes
+    def getTrajectories(self, frameData):
+        trajectories = {}
+        if not "particles" in self._parameters:
+            return {}
+        name = self.getId()
+        k = 0
+        for f in frameData:
+            j = 0
+            for p in self._parameters["particles"]:
+                pname = name + ":" + str(j)
+                if pname in f:
+                    if pname not in trajectories:
+                        trajectories[pname] = {}
+                    trajectories[pname][k] = f[pname]
+                j = j + 1
+            k = k + 1
+        return trajectories
 
 class VariableSchema(ParameterizedSchema):
     def __init__(self, identity=""):

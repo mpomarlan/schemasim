@@ -23,7 +23,7 @@ cont = fc.Containment(container=pot, containee=popcorn)
 
 # The order in which schemas are mentioned here is not that important, but it is important that all objects
 # and all relevant relations between them are put in
-results = sg.interpretScene([aa, pot, cont, popcorn, cov, board], bsim)
+results = sg.interpretScene([aa, pot, cont, popcorn, cov, board], bsim, simulate_counterfactuals=True)
 
 # Of course, other things would be interesting to do with results, e.g. learning rules of the form
 # (qualitative description of scene) -> (qualitative description of behavior)

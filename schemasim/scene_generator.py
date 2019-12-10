@@ -314,10 +314,61 @@ def interpretScene(schemas, simulator, simulate_counterfactuals=True, render=Fal
             if name not in retq["scene_results"]["default"]:
                  retq["scene_results"]["default"][name] = []
             retq["scene_results"]["default"][name].append([e, judgement, cost])
-    # TODO
-    #if simulate_counterfactuals:
-    #    # TODO
-    #    print("Analyzing counterfactual versions of the scene")
-    #    cFolder = os.path.join(sceneFolder, "counterfactuals")
+    if simulate_counterfactuals:
+        print("Analyzing counterfactual versions of the scene")
+        counterfactualSceneFolder = os.path.join(sceneFolder, "counterfactuals")
+        os.mkdir(counterfactualSceneFolder)
+        retq["scene_results"]["counterfactuals"] = {}
+        for s in enet.schemas():
+            if isinstance(s, st.ParameterizedSchema):
+                cId = s.getId()
+                retq["scene_results"]["counterfactuals"][cId] = {}
+                s._parameters["has_collision"] = 0
+                s._parameters["is_kinematic"] = 1
+                currentExpectations = {}
+                if cId in counterfactualExpectations:
+                    currentExpectations = {cId: counterfactualExpectations[cId]}
+                    print("counterfactual expectations for %s" % cId)
+                    for e in currentExpectations[cId]:
+                        print("\t%s" % simplePrint(e))
+                for name, exps in defaultExpectations.items():
+                    if name != cId:
+                        currentExpectations[name] = exps
+                        print("default expectations for %s" % name)
+                        for e in currentExpectations[name]:
+                            print("\t%s" % simplePrint(e))
+                trajectories = s.getTrajectories(frameData)
+                # TODO: at the moment, the only counterfactual condition is disabling an object, but this might change ...
+                cFolder = os.path.join(counterfactualSceneFolder, "disable_"+s.getId())
+                os.mkdir(cFolder)
+                script = simulator.sceneScript(enet.schemas(), cFolder, blender_filename="animation.blend", log_filename="animation.log", trajectories=trajectories, render=render)
+                scriptPath = os.path.join(cFolder, "scenescript.py")
+                with open(scriptPath, "w") as outfile:
+                    outfile.write(script)
+                print("Generated scene setup script, will now simulate scene (this may take some time).")
+                if render:
+                    print("\twill also render scene result, even more patience required.")
+                try:
+                    proc = subprocess.Popen([simPath, "-b", "--python", scriptPath], stdout = subprocess.PIPE, stderr = subprocess.PIPE)
+                    stdout, stderr = proc.communicate()
+                except OSError as e:
+                    print("Encountered error when trying to call simulator:\n\t%s" % str(e))
+                    retq["error"] = ("system error when calling simulator at %s: %s" % (simPath, str(e)))
+                    return retq
+                print("Simulation done, will now interpret results of the counterfactual scene %s." % ("disabled_" + s.getId()))
+                counterfactualFrameData = [ast.literal_eval(x) for x in open(os.path.join(cFolder, "animation.log")).read().splitlines()]
+                for name, exps in currentExpectations.items():
+                    print("Evaluating expectations for %s" % name)
+                    for e in exps:
+                        judgement, cost = e._roles["event"].evaluateTimeline(counterfactualFrameData)
+                        if judgement:
+                            print("\t%s: True (%s)" % (simplePrint(e), str(cost)))
+                        else:
+                            print("\t%s: False (%s)" % (simplePrint(e), str(cost)))
+                        if name not in retq["scene_results"]["counterfactuals"][cId]:
+                            retq["scene_results"]["counterfactuals"][cId][name] = []
+                        retq["scene_results"]["counterfactuals"][cId][name].append([e, judgement, cost])
+                s._parameters["has_collision"] = 1
+                s._parameters["is_kinematic"] = 0
     return retq
 

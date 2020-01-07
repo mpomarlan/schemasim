@@ -366,7 +366,6 @@ class BlenderSimulator(simulator.Simulator):
             densityMapConstraints.pop(("rx", "ry", "rz", "rw"))
             if not self.sampleAndValidateObject(obj.getMeshPath(modifier=".stl"), 0.0, 0.0, 0.0, obj, collisionManager, gPDTranslation, gPDQuaternion, addToScene=False):
                 return False
-            print(obj._parameters["tx"], obj._parameters["ty"], obj._parameters["tz"])
             particleNum = 30
             if densityMapConstraints[("particle_num",)]:
                 particleNum = samplePD(self.getParticleNumPD(densityMapConstraints[("particle_num",)]))
@@ -608,7 +607,6 @@ class BlenderSimulator(simulator.Simulator):
                     retq = retq + "obj.keyframe_insert(data_path='location', frame=2)\n"
                     retq = retq + "obj.keyframe_insert(data_path='rotation_quaternion', frame=2)\n"
                 elif has_trajectory and (2 in trajectories[o._parameters["name"]]):
-                    print(trajectories[o._parameters["name"]][2].keys())
                     x = trajectories[o._parameters["name"]][2]["x"]
                     y = trajectories[o._parameters["name"]][2]["y"]
                     z = trajectories[o._parameters["name"]][2]["z"]

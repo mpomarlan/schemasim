@@ -48,7 +48,7 @@ def filterByMovingPointInVolume(translationRPD, targetVolume, movingPoint, stric
         dy = movedPoint[1]-centroid[1]
         dz = movedPoint[2]-centroid[2]
         d = (dx*dx + dy*dy + dz*dz)
-        c[0] = c[0]/math.pow((1.0 + d), 10)
+        c[0] = c[0]/(1.0 + d*d*d)
         if 0.001 < cost:
             c[0] = c[0]/math.exp(cost/strictness)
     return translationRPD
@@ -68,19 +68,12 @@ def filterByTargetPointInVolume(translationRPD, targetPoint, movingVolume, stric
 def filterBySurfaceContainment(translationRPD, targetSurface, movingSurface, strictness=0.005):
     if not movingSurface:
         return None
-    targetCenter = centroid(targetSurface)
     for c in translationRPD:
         movedSurface = []
         for e in movingSurface:
             movedSurface.append(transformVector(e, c[1], [0,0,0,1]))
-        movedCenter = centroid(movedSurface)
         cost = outerAreaFromSurface(movedSurface, targetSurface)
-        dx = movedCenter[0] - targetCenter[0]
-        dy = movedCenter[1] - targetCenter[1]
-        dz = movedCenter[2] - targetCenter[2]
-        d = (dx*dx + dy*dy + dz*dz)
         c[0] = c[0]/math.exp(cost/strictness)
-        c[0] = c[0]/(math.pow((1.0 + d), 4))
     return translationRPD
 
 class BlenderSimulator(simulator.Simulator):
@@ -166,15 +159,15 @@ class BlenderSimulator(simulator.Simulator):
                 boxPD = uniformBoxRPD(dims, translation=translation, rotation=rotation, resolution=0.15)
                 if c.getMovingVolume(self):
                     targetPoint = c.getTargetPoint(self)
-                    for j in list(range(len(boxPD))):
-                        boxPD[j] = [boxPD[j][0], [targetPoint[0] - boxPD[j][1][0], targetPoint[1] - boxPD[j][1][1], targetPoint[2] - boxPD[j][1][2]]]
+                    for e in boxPD:
+                        e = [e[0], [targetPoint[0] - e[1][0], targetPoint[1] - e[1][1], targetPoint[2] - e[1][2]]]
             if "SurfaceContainment" == c._type:
                 dims, translation, rotation = c.getTargetSurfaceBounds(self)
                 center = centroid(c.getMovingSurface(self))
                 center = transformVector(center, [0,0,0], quaternion)
                 boxPD = uniformBoxRPD(dims, translation=translation, rotation=rotation, resolution=0.4)
-                for j in list(range(len(boxPD))):
-                    boxPD[j] = [boxPD[j][0], [boxPD[j][1][0] - center[0], boxPD[j][1][1] - center[1], boxPD[j][1][2] - center[2]]]
+                for e in boxPD:
+                    e = [e[0], [e[1][0] - center[0], e[1][1] - center[1], e[1][2] - center[2]]]
             if dims:
                 pd = pd + boxPD
         strictness = 0.005
@@ -193,8 +186,8 @@ class BlenderSimulator(simulator.Simulator):
             if "SurfaceContainment" == c._type:
                 movingSurface = c.getMovingSurface(self)
                 targetSurface = c.getTargetSurface(self)
-                for j in list(range(len(movingSurface))):
-                    movingSurface[j] = transformVector(movingSurface[j], [0,0,0], quaternion)
+                for e in movingSurface:
+                    e = transformVector(e, [0,0,0], quaternion)
                 pd = filterBySurfaceContainment(pd, targetSurface, movingSurface, strictness=strictness)
         return normalizePD(pd)
     def getRotationPD(self, constraints):
@@ -274,8 +267,7 @@ class BlenderSimulator(simulator.Simulator):
             translation[2] = translation[2] + cz
             rotation = samplePD(gPDQuaternion)
             pose = poseFromTQ(translation, rotation)
-            collision= collisionManager.in_collision_single(mesh, pose)
-            if not collision:
+            if not collisionManager.in_collision_single(mesh, pose):
                 name = "Object_%d" % (len(collisionManager._objs))
                 if "name" in obj._parameters:
                     name = obj._parameters["name"]
@@ -374,6 +366,7 @@ class BlenderSimulator(simulator.Simulator):
             densityMapConstraints.pop(("rx", "ry", "rz", "rw"))
             if not self.sampleAndValidateObject(obj.getMeshPath(modifier=".stl"), 0.0, 0.0, 0.0, obj, collisionManager, gPDTranslation, gPDQuaternion, addToScene=False):
                 return False
+            print(obj._parameters["tx"], obj._parameters["ty"], obj._parameters["tz"])
             particleNum = 30
             if densityMapConstraints[("particle_num",)]:
                 particleNum = samplePD(self.getParticleNumPD(densityMapConstraints[("particle_num",)]))
@@ -397,16 +390,9 @@ class BlenderSimulator(simulator.Simulator):
                 obj._parameters["particles"][k]["vy"] = velocity[1]
                 obj._parameters["particles"][k]["vz"] = velocity[2]
                 for kk, v in densityMapConstraints.items():
-                    if kk not in ["mesh", "mass"]:
+                    if kk != "mesh":
                         assignmentFns[kk](obj._parameters["particles"][k], v, densityGenerationFns[kk](v))
-                # TODO: clean up mass assignment for particles
                 obj._parameters["particles"][k]["mesh"] = obj.getMeshPath(modifier="")
-                obj._parameters["particles"][k]["mass"] = obj._parameters["mass"]
-            validParticles = []
-            for p in obj._parameters["particles"]:
-                if "mesh" in p:
-                    validParticles.append(p)
-            obj._parameters["particles"] = validParticles
         return True
     def isExplicitObject(self, obj):
         # To initialize a rigid or soft object, blender must know:
@@ -471,7 +457,10 @@ class BlenderSimulator(simulator.Simulator):
         retq = retq + "scene = bpy.data.scenes['Scene']\n"
         retq = retq + "bpy.ops.object.select_all(action='SELECT')\n"
         retq = retq + "bpy.ops.object.delete(use_global=False)\n\n"
-        retq = retq + "bpy.ops.object.lamp_add(type='SUN', radius=1.31, location=(21.5562, 0, 28.3477))\n"
+        retq = retq + "if 'lamp_add' in dir(bpy.ops.object):"
+        retq = retq + "    bpy.ops.object.lamp_add(type='SUN', radius=1.31, location=(21.5562, 0, 28.3477))\n"
+        retq = retq + "elif 'light_add' in dir(bpy.ops.object):"
+        retq = retq + "    bpy.ops.object.light_add(type='SUN', radius=1.31, location=(21.5562, 0, 28.3477))\n"
         retq = retq + "bpy.context.object.rotation_mode = 'QUATERNION'\n"
         retq = retq + "bpy.context.object.rotation_quaternion[0] = 0.949\n"
         retq = retq + "bpy.context.object.rotation_quaternion[1] = 0\n"
@@ -505,7 +494,10 @@ class BlenderSimulator(simulator.Simulator):
         retq = retq + "bpy.context.object.rigid_body.collision_margin = 0.0\n"
         retq = retq + "bpy.context.object.rigid_body.restitution = 0.8\n"
         retq = retq + "bpy.ops.object.modifier_add(type='COLLISION')\n"
-        retq = retq + "bpy.context.active_object.select = False\n\n"
+        retq = retq + "if 'select' in dir(bpy.context.active_object):"
+        retq = retq + "    bpy.context.active_object.select = False\n\n"
+        retq = retq + "elif 'select_set' in dir(bpy.context.active_object):"
+        retq = retq + "    bpy.context.active_object.select_set(False)\n\n"
         retq = retq + "bpy.data.scenes['Scene'].frame_end = 250\n"
         retq = retq + "bpy.data.scenes['Scene'].rigidbody_world.point_cache.frame_end = 250\n"
         for o in schemas:
@@ -616,6 +608,7 @@ class BlenderSimulator(simulator.Simulator):
                     retq = retq + "obj.keyframe_insert(data_path='location', frame=2)\n"
                     retq = retq + "obj.keyframe_insert(data_path='rotation_quaternion', frame=2)\n"
                 elif has_trajectory and (2 in trajectories[o._parameters["name"]]):
+                    print(trajectories[o._parameters["name"]][2].keys())
                     x = trajectories[o._parameters["name"]][2]["x"]
                     y = trajectories[o._parameters["name"]][2]["y"]
                     z = trajectories[o._parameters["name"]][2]["z"]
@@ -714,8 +707,7 @@ class BlenderSimulator(simulator.Simulator):
         retq = retq + ("    os.remove('%s')\n" % blender_outfile_path)
         retq = retq + ("bpy.ops.wm.save_as_mainfile(filepath='%s')\n\n" % blender_outfile_path)
         retq = retq + ("with open('%s', 'w') as outfile:\n" % blender_logfile_path)
-        retq = retq + "    outfile.write('{}\\n') # Blender frames are 1-indexed, so the 0 frame is empty.\n"
-        retq = retq + "    for frame in range(1, scene.frame_end+1):\n"
+        retq = retq + "    for frame in range(1, scene.frame_end):\n"
         retq = retq + "        scene.frame_set(frame)\n"
         retq = retq + "        frame_log = {}\n" 
         retq = retq + "        for o in bpy.data.objects:\n"

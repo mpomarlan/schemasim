@@ -4,7 +4,7 @@ Naive physics reasoning with simulation: go from a qualitative description of a 
 Dependencies:
 
 * python 3.4 or newer
-* blender, version 2.78c (newer may work also)
+* blender, versions 2.78c, 2.79, 2.80, 2.81a
 * trimesh (sudo pip3 install trimesh)
 * rtree (sudo apt-get install python3-rtree)
 

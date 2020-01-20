@@ -33,7 +33,7 @@ class Floor(st.ParameterizedSchema):
         self._parameters["is_kinematic"] = 1
 
 class Cube(st.ParameterizedSchema):
-    def __init__(self, name="Cube", mass=1.0, restitution=0.3, friction=0.7, linear_damping=0.1, angular_damping=0.1):
+    def __init__(self, name="Cube", mass=1.0, restitution=0.3, friction=0.7, linear_damping=0.4, angular_damping=0.5):
         super().__init__()
         self._meta_type.append("Cube")
         self._parameters["type"] = "Cube"
@@ -49,7 +49,7 @@ class Cube(st.ParameterizedSchema):
         self._parameters["is_kinematic"] = 0
 
 class Pot(st.ParameterizedSchema):
-    def __init__(self, name="Pot", mass=4.0, restitution=0.3, friction=0.75, linear_damping=0.1, angular_damping=0.4):
+    def __init__(self, name="Pot", mass=4.0, restitution=0.3, friction=0.75, linear_damping=0.4, angular_damping=0.5):
         super().__init__()
         self._meta_type.append("Pot")
         self._parameters["type"] = "Pot"
@@ -65,7 +65,7 @@ class Pot(st.ParameterizedSchema):
         self._parameters["is_kinematic"] = 0
 
 class BalsaBoard(st.ParameterizedSchema):
-    def __init__(self, name="BalsaBoard", mass=0.02, restitution=0.1, friction=0.75, linear_damping=0.1, angular_damping=0.4):
+    def __init__(self, name="BalsaBoard", mass=0.02, restitution=0.1, friction=0.75, linear_damping=0.4, angular_damping=0.5):
         super().__init__()
         self._meta_type.append("BalsaBoard")
         self._parameters["type"] = "BalsaBoard"
@@ -81,7 +81,7 @@ class BalsaBoard(st.ParameterizedSchema):
         self._parameters["is_kinematic"] = 0
 
 class Cup(st.ParameterizedSchema):
-    def __init__(self, name="Cup", mass=0.4, restitution=0.1, friction=0.75, linear_damping=0.1, angular_damping=0.4):
+    def __init__(self, name="Cup", mass=0.4, restitution=0.1, friction=0.75, linear_damping=0.4, angular_damping=0.5):
         super().__init__()
         self._meta_type.append("Cup")
         self._parameters["type"] = "Cup"
@@ -97,7 +97,7 @@ class Cup(st.ParameterizedSchema):
         self._parameters["is_kinematic"] = 0
 
 class Lid(st.ParameterizedSchema):
-    def __init__(self, name="Lid", mass=1.5, restitution=0.3, friction=0.75, linear_damping=0.1, angular_damping=0.4):
+    def __init__(self, name="Lid", mass=1.5, restitution=0.3, friction=0.75, linear_damping=0.4, angular_damping=0.5):
         super().__init__()
         self._meta_type.append("Lid")
         self._parameters["type"] = "Lid"
@@ -113,7 +113,7 @@ class Lid(st.ParameterizedSchema):
         self._parameters["is_kinematic"] = 0
 
 class Popcorn(st.ParticleSystem):
-    def __init__(self, name="Popcorn", mass=0.003, restitution=0.4, friction=0.75, linear_damping=0.1, angular_damping=0.4, radius=0.5, v_min=3.0, v_max=9.0, v_direction=[0.0,0.0,1.0], v_bias=2.0):
+    def __init__(self, name="Popcorn", mass=0.003, restitution=0.4, friction=0.75, linear_damping=0.4, angular_damping=0.5, radius=0.5, v_min=3.0, v_max=9.0, v_direction=[0.0,0.0,1.0], v_bias=2.0):
         super().__init__()
         self._meta_type.append("Popcorn")
         self._parameters["type"] = "Popcorn"

@@ -1,8 +1,6 @@
 import os
 import sys
 
-import trimesh
-
 import subprocess
 
 from datetime import datetime
@@ -186,9 +184,6 @@ def schemaExplications(explicitSchemas, explicationCoreSchemas, simulator):
                     currentCoreSchemas.append(c)
     return retq
 
-def parameterizeObjects(schemas,simulator):
-    return schemas
-
 def explicateSchemas(schemas, simulator):
     if isinstance(schemas, list):
         schemaNet = SchemaNet()
@@ -212,7 +207,7 @@ def explicateSchemas(schemas, simulator):
         explicitSchemaNet = schemaExplications(explicitSchemas, explicationCoreSchemas, simulator)
         k = 0
         try:
-            collisionManager = trimesh.collision.CollisionManager()
+            collisionManager = simulator.space().makeCollisionManager()
         except ValueError:
             print("Using dummy collision manager because FCL might not be installed")
             collisionManager = DummyCollisionManager()
@@ -306,7 +301,7 @@ def interpretScene(schemas, simulator, simulate_counterfactuals=True, render=Fal
     for name, exps in defaultExpectations.items():
         print("Evaluating expectations for %s" % name)
         for e in exps:
-            judgement, cost = e._roles["event"].evaluateTimeline(frameData)
+            judgement, cost = e._roles["event"].evaluateTimeline(frameData, simulator)
             if judgement:
                 print("\t%s: True (%s)" % (simplePrint(e), str(cost)))
             else:
@@ -360,7 +355,7 @@ def interpretScene(schemas, simulator, simulate_counterfactuals=True, render=Fal
                 for name, exps in currentExpectations.items():
                     print("Evaluating expectations for %s" % name)
                     for e in exps:
-                        judgement, cost = e._roles["event"].evaluateTimeline(counterfactualFrameData)
+                        judgement, cost = e._roles["event"].evaluateTimeline(counterfactualFrameData, simulator)
                         if judgement:
                             print("\t%s: True (%s)" % (simplePrint(e), str(cost)))
                         else:

@@ -7,31 +7,27 @@ import schemasim.schemas.l0_schema_templates as st
 import schemasim.schemas.l1_geometric_primitives as gp
 import schemasim.schemas.l2_geometric_primitive_relations as gpr
 
-from schemasim.util.geometry import volumeInclusion
-
 class PrimitiveMovement(st.RoleDefiningSchema):
     def __init__(self, obj=None, relatum=None):
         super().__init__()
         self._type = "PrimitiveMovement"
         self._roles = {"obj": obj, "relatum": relatum}
         self._minimize_cost = True
-    def _getNormalMovement(self, extents):
-        return math.sqrt(extents[0]*extents[0] + extents[1]*extents[1] + extents[2]*extents[2])
-    def _getDisplacementChange(self, cobj, crel, lastDisplacement):
-        px = (cobj[0] - crel[0]) - lastDisplacement[0]
-        py = (cobj[1] - crel[1]) - lastDisplacement[1]
-        pz = (cobj[2] - crel[2]) - lastDisplacement[2]
-        norm = math.sqrt(px*px + py*py + pz*pz)
-        return norm, [px, py, pz]
-    def _getDisplacement(self, cobj, crel):
-        return self._getDisplacementChange(cobj, crel, [0.0, 0.0, 0.0])
-    def _getCostDelta(self, objectvolume, relatumvolume, cobj, crel, lastDisplacement, lastDisplacementNorm):
+    def _getNormalMovement(self, extents, space):
+        return space.vectorNorm(extents)
+    def _getDisplacementChange(self, cobj, crel, lastDisplacement, space):
+        p = space.vectorDifference(space.vectorDifference(cobj, crel), lastDisplacement)
+        return space.vectorNorm(p), p
+    def _getDisplacement(self, cobj, crel, space):
+        return self._getDisplacementChange(cobj, crel, space.nullVector(), space)
+    def _getCostDelta(self, objectvolume, relatumvolume, cobj, crel, lastDisplacement, lastDisplacementNorm, space):
         retq = 0.0
-        if not volumeInclusion(objectvolume, relatumvolume):
-            retq, disp = self._getDisplacementChange(cobj, crel, lastDisplacement)
+        if not space.volumeInclusion(objectvolume, relatumvolume):
+            retq, disp = self._getDisplacementChange(cobj, crel, lastDisplacement, space)
         return retq
-    def evaluateTimeline(self, frameData):
-        ovolume = self._roles["obj"].getVolume()
+    def evaluateTimeline(self, frameData, simulator):
+        space = simulator.space()
+        ovolume = self._roles["obj"].getVolume(simulator)
         if not isinstance(ovolume, list):
             cost = [0.0]
             lastDisplacement = [None]
@@ -42,14 +38,14 @@ class PrimitiveMovement(st.RoleDefiningSchema):
             lastDisplacement = [None]*len(ovolume)
             lastDisplacementNorm = [0.0]*len(ovolume)
             extents = list(ovolume[0].extents)
-        normalMovement = self._getNormalMovement(extents)
+        normalMovement = self._getNormalMovement(extents, space)
         if isinstance(self._roles["obj"], st.ParticleSystem):
             normalMovement = normalMovement*10
         for f in list(range(len(frameData))):
             if not frameData[f]:
                 continue
-            ovolume = self._roles["obj"].getVolumeAtFrame(frameData, f)
-            rvolume = self._roles["relatum"].getVolumeAtFrame(frameData, f)
+            ovolume = self._roles["obj"].getVolumeAtFrame(frameData, f, simulator)
+            rvolume = self._roles["relatum"].getVolumeAtFrame(frameData, f, simulator)
             if not isinstance(ovolume, list):
                 co = [list(ovolume.centroid)]
                 ovolume = [ovolume]
@@ -60,8 +56,8 @@ class PrimitiveMovement(st.RoleDefiningSchema):
             cr = list(rvolume.centroid)
             for k in list(range(len(lastDisplacement))):
                 if lastDisplacement[k]:
-                    cost[k] = cost[k] + self._getCostDelta(ovolume[k], rvolume, co[k], cr, lastDisplacement[k], lastDisplacementNorm[k])
-                lastDisplacementNorm[k], lastDisplacement[k] = self._getDisplacement(co[k], cr)
+                    cost[k] = cost[k] + self._getCostDelta(ovolume[k], rvolume, co[k], cr, lastDisplacement[k], lastDisplacementNorm[k], space)
+                lastDisplacementNorm[k], lastDisplacement[k] = self._getDisplacement(co[k], cr, space)
         for k in list(range(len(cost))):
             cost[k] = cost[k]/normalMovement
         judgement = True
@@ -77,11 +73,11 @@ class RelativeDepart(PrimitiveMovement):
     def __init__(self, obj=None, relatum=None):
         super().__init__(obj=obj, relatum=relatum)
         self._type = "RelativeDepart"
-        self._minimize_cost = True
-    def _getCostDelta(self, objectvolume, relatumvolume, cobj, crel, lastDisplacement, lastDisplacementNorm):
+        self._minimize_cost = False
+    def _getCostDelta(self, objectvolume, relatumvolume, cobj, crel, lastDisplacement, lastDisplacementNorm, space):
         retq = 0.0
-        if not volumeInclusion(objectvolume, relatumvolume):
-            d, v = self._getDisplacement(cobj, crel)
+        if not space.volumeInclusion(objectvolume, relatumvolume):
+            d, v = self._getDisplacement(cobj, crel, space)
             if d > lastDisplacementNorm:
                 retq = math.fabs(d - lastDisplacementNorm)
         return retq
@@ -91,10 +87,10 @@ class RelativeApproach(PrimitiveMovement):
         super().__init__(obj=obj, relatum=relatum)
         self._type = "RelativeApproach"
         self._minimize_cost = True
-    def _getCostDelta(self, objectvolume, relatumvolume, cobj, crel, lastDisplacement, lastDisplacementNorm):
+    def _getCostDelta(self, objectvolume, relatumvolume, cobj, crel, lastDisplacement, lastDisplacementNorm, space):
         retq = 0.0
-        if not volumeInclusion(objectvolume, relatumvolume):
-            d, v = self._getDisplacement(cobj, crel)
+        if not space.volumeInclusion(objectvolume, relatumvolume):
+            d, v = self._getDisplacement(cobj, crel, space)
             if d < lastDisplacementNorm:
                 retq = math.fabs(d - lastDisplacementNorm)
         return retq
@@ -115,27 +111,28 @@ class PrimitiveVerticalMovement(PrimitiveMovement):
     def __init__(self, obj=None, relatum=None):
         super().__init__(obj=obj, relatum=relatum)
         self._type = "PrimitiveVerticalMovement"
-    def _getNormalMovement(self, extents):
-        return extents[2]
+    def _getNormalMovement(self, extents, space):
+        return space.verticalVectorComponent(extents)
 
 class RelativeStayLevel(PrimitiveVerticalMovement):
     def __init__(self, obj=None, relatum=None):
         super().__init__(obj=obj, relatum=relatum)
         self._type = "RelativeStayLevel"
         self._minimize_cost = True
-    def _getCostDelta(self, objectvolume, relatumvolume, cobj, crel, lastDisplacement, lastDisplacementNorm):
-        d, v = self._getDisplacementChange(cobj, crel, lastDisplacement)
-        return math.fabs(v[2])
+    def _getCostDelta(self, objectvolume, relatumvolume, cobj, crel, lastDisplacement, lastDisplacementNorm, space):
+        d, v = self._getDisplacementChange(cobj, crel, lastDisplacement, space)
+        return math.fabs(space.verticalVectorComponent(v))
 
 class RelativeFall(PrimitiveVerticalMovement):
     def __init__(self, obj=None, relatum=None):
         super().__init__(obj=obj, relatum=relatum)
         self._type = "RelativeFall"
         self._minimize_cost = False
-    def _getCostDelta(self, objectvolume, relatumvolume, cobj, crel, lastDisplacement, lastDisplacementNorm):
+    def _getCostDelta(self, objectvolume, relatumvolume, cobj, crel, lastDisplacement, lastDisplacementNorm, space):
         retq = 0.0
-        d, v = self._getDisplacementChange(cobj, crel, lastDisplacement)
-        if v[2] < 0.0:
-            retq = math.fabs(v[2])
+        d, v = self._getDisplacementChange(cobj, crel, lastDisplacement, space)
+        v = space.verticalVectorComponent(v)
+        if v < 0.0:
+            retq = math.fabs(v)
         return retq
 

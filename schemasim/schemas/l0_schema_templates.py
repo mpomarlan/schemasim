@@ -1,10 +1,6 @@
 import os
 import sys
 
-import trimesh
-
-from schemasim.util.geometry import poseFromTQ
-
 class Schema:
     def __init__(self):
         self._type = ""
@@ -49,46 +45,26 @@ class ParameterizedSchema(Schema):
         if not os.path.isfile(path):
             return None
         return path
-    def _getVolumeInternal(self):
-        meshPath = self.getMeshPath(modifier=".stl")
-        if not meshPath:
-            return None
-        return trimesh.load(meshPath)
-    def _getTransformInternal(self):
-        t = [0.0,0.0,0.0]
-        q = [0.0,0.0,0.0,1.0]
-        j = 0
-        for p in ["tx", "ty", "tz"]:
-            if p in self._parameters:
-                t[j] = self._parameters[p]
-            j = j + 1
-        j = 0
-        for p in ["rx", "ry", "rz", "rw"]:
-            if p in self._parameters:
-                q[j] = self._parameters[p]
-            j = j + 1
-        return t, q
-    def getVolumeBounds(self):
-        volume = self._getVolumeInternal()
-        t, q = self._getTransformInternal()
-        bbox = list(volume.bounds)
-        bbox = [[bbox[0][0], bbox[1][0]], [bbox[0][1], bbox[1][1]], [bbox[0][2], bbox[1][2]]]
-        return bbox, t, q
-    def getVolume(self):
-        volume = self._getVolumeInternal()
-        t, q = self._getTransformInternal()
-        transform = poseFromTQ(t, q)
-        volume.apply_transform(transform)
-        return volume
-    def getVolumeAtFrame(self, frameData, frame):
+    def _getVolumeInternal(self, sim):
+        return sim.space().loadVolume(self.getMeshPath(modifier=sim.space().volumePathModifier()))
+    def _getTransformInternal(self, sim):
+        return sim.translationVector(self), sim.rotationRepresentation(self)
+    def getVolumeBounds(self, sim):
+        t, r = self._getTransformInternal(sim)
+        return sim.space().volumeBounds(self._getVolumeInternal(sim)), t, r
+    def getVolume(self, sim):
+        t, r = self._getTransformInternal(sim)
+        return sim.space().transformVolume(self._getVolumeInternal(sim), t, r)
+    def getFloorLevel(self, sim):
+        return sim.space().floorLevel(self.getVolume(sim))
+    def getVolumeAtFrame(self, frameData, frame, sim):
         if 0 == frame:
-            return self.getVolume()
-        volume = self._getVolumeInternal()
+            return self.getVolume(sim)
+        volume = self._getVolumeInternal(sim)
         objectFrame = frameData[frame][self.getId()]
-        t = [objectFrame["x"], objectFrame["y"], objectFrame["z"]]
-        q = [objectFrame["rx"], objectFrame["ry"], objectFrame["rz"], objectFrame["rw"]]
-        volume.apply_transform(poseFromTQ(t, q))
-        return volume
+        t = sim.translationVector(objectFrame)
+        r = sim.rotationRepresentation(objectFrame)
+        return sim.space().transformVolume(volume, t, r)
     def getTrajectories(self, frameData):
         name = self.getId()
         trajectories = {name: {}}
@@ -121,51 +97,33 @@ class ParticleSystem(ParameterizedSchema):
         for k in sorted(particles.keys()):
             retq.append(particles[k])
         return retq
-    def _getParticleTransformsInternal(self):
+    def _getParticleTransformsInternal(self, sim):
         if not "particles" in self._parameters:
             return None
         ts = []
-        qs = []
+        rs = []
         for p in self._parameters["particles"]:
-            t = [0.0,0.0,0.0]
-            q = [0.0,0.0,0.0,1.0]
-            j = 0
-            for k in ["tx", "ty", "tz"]:
-                if k in p:
-                    t[j] = p[k]
-                j = j + 1
-            j = 0
-            for k in ["rx", "ry", "rz", "rw"]:
-                if k in p:
-                    q[j] = p[k]
-                j = j + 1
-            ts.append(t)
-            qs.append(q)
-        return ts, qs
-    def getVolume(self):
+            ts.append(sim.translationVector(p))
+            rs.append(sim.rotationRepresentation(p))
+        return ts, rs
+    def getVolume(self, sim):
         if not "particles" in self._parameters:
             return None
-        basevolume = self._getVolumeInternal()
-        ts, qs = self._getParticleTransformsInternal()
+        basevolume = self._getVolumeInternal(sim)
+        ts, rs = self._getParticleTransformsInternal(sim)
         volumes = []
-        for t, q in zip(ts, qs):
-            transform = poseFromTQ(t, q)
-            volume = basevolume.copy()
-            volume.apply_transform(transform)
+        for t, r in zip(ts, rs):
+            volume = sim.space().transformVolume(basevolume.copy(), t, r)
             volumes.append(volume)
         return volumes
-    def getVolumeAtFrame(self, frameData, frame):
+    def getVolumeAtFrame(self, frameData, frame, sim):
         if 0 == frame:
-            return self.getVolume()
-        basevolume = self._getVolumeInternal()
+            return self.getVolume(sim)
+        basevolume = self._getVolumeInternal(sim)
         objectFrame = self._getFrameData(frameData[frame])
         volumes = []
         for p in objectFrame:
-            volume = basevolume.copy()
-            t = [p["x"], p["y"], p["z"]]
-            q = [p["rx"], p["ry"], p["rz"], p["rw"]]
-            volume.apply_transform(poseFromTQ(t, q))
-            volumes.append(volume)
+            volumes.append(sim.space().transformVolume(basevolume.copy(), sim.translationVector(p), sim.rotationRepresentation(p)))
         return volumes
     def getTrajectories(self, frameData):
         trajectories = {}

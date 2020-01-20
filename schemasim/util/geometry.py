@@ -124,5 +124,5 @@ def outerAreaFromSurface(movingSurface, targetSurface):
     normedArea = ((1.0*nonOverlapping)/len(movingSurface))
     if distanceFromPoint(centroid(movingSurface), centroid(targetSurface)) <= 0.2:
         normedArea = normedArea*0.01
-    return normedArea*0.05
+    return normedArea*0.5
 

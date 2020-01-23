@@ -54,7 +54,7 @@ class BlenderSimulator(phys_simulator_3D.PhysicsSimulator3D):
         retq = retq + "import json\n"
         retq = retq + "import ast\n\n"
         retq = retq + "def leetHAXX(err):\n"
-        retq = retq + "    return ast.literal_eval(err.args[0][err.args[0].find('not found in ') + len('not found in '):])"
+        retq = retq + "    return ast.literal_eval(err.args[0][err.args[0].find('not found in ') + len('not found in '):])\n"
         retq = retq + "bpy.context.scene.render.fps = 24\n"
         retq = retq + "bpy.context.scene.render.fps_base = 1\n"
         retq = retq + "bpy.ops.rigidbody.world_add()\n"

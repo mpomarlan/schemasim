@@ -98,7 +98,7 @@ class BlenderSimulator(phys_simulator_3D.PhysicsSimulator3D):
             retq = retq + "    bpy.context.scene.view_settings.view_transform = 'Standard'\n"
             retq = retq + "lks = ('Standard - High Contrast')\n"
             retq = retq + "try:\n"
-            retq = retq + "    bpy.context.scene.view_settings.view_transform = 'Bruh y u heff to make zis hard bruh'\n"
+            retq = retq + "    bpy.context.scene.view_settings.look = 'Bruh y u heff to make zis hard bruh'\n"
             retq = retq + "except TypeError as err:\n"
             retq = retq + "    lks = leetHAXX(err)\n"
             retq = retq + "if 'High Contrast' in lks:\n"

@@ -84,9 +84,9 @@ class BlenderSimulator(phys_simulator_3D.PhysicsSimulator3D):
         retq = retq + "bpy.context.object.data.sensor_fit = 'HORIZONTAL'\n"
         if render:
             retq = retq + "bpy.context.scene.display_settings.display_device = 'sRGB'\n"
-            retq = retq + "bpy.context.scene.view_settings.view_transform = 'sRGB OETF'\n"
-            retq = retq + "bpy.context.scene.view_settings.look = 'High Contrast'\n"
-            retq = retq + "bpy.context.scene.sequencer_colorspace_settings.name = 'sRGB OETF'\n"
+            retq = retq + "bpy.context.scene.view_settings.view_transform = 'Standard'\n"
+            retq = retq + "bpy.context.scene.view_settings.look = 'Standard - High Contrast'\n"
+            retq = retq + "bpy.context.scene.sequencer_colorspace_settings.name = 'sRGB'\n"
         retq = retq + "scene.camera = bpy.data.objects['Camera']\n"
         retq = retq + ("bpy.ops.wm.collada_import(filepath='%s')\n" % eo.Floor().getMeshPath(modifier=""))
         retq = retq + "bpy.context.object.rotation_mode = 'QUATERNION'\n"

@@ -236,7 +236,7 @@ def simplePrint(schema):
         return retq + ")"
     return str(schema)
 
-def interpretScene(schemas, simulator, simulate_counterfactuals=True, render=False, nframes=250):
+def interpretScene(schemas, simulator, simulate_counterfactuals=True, render=False, nframes=250, sceneFolder=None):
     simPath = simulator.getPath()
     if not simPath:
         print("No path known to simulator; make sure environment variable %s is set" % simulator.getPathEnvironmentVariable())
@@ -251,7 +251,8 @@ def interpretScene(schemas, simulator, simulate_counterfactuals=True, render=Fal
     if not enet:
         print("\tError: scene inconsistent or impossible.")
         return {"scene_results": None, "error": "scene inconsistent or impossible"}
-    sceneFolder = os.path.join(workFolder, str(datetime.now()))
+    if not sceneFolder:
+        sceneFolder = os.path.join(workFolder, str(datetime.now()))
     print("Scene set up, will save results at %s" % sceneFolder)
     os.mkdir(sceneFolder)
     defaultExpectations = {}
@@ -296,7 +297,7 @@ def interpretScene(schemas, simulator, simulate_counterfactuals=True, render=Fal
     #    print("Simulator reported errors:\n%s" % str(stderr.decode()))
     #    return {"scene_results": None, "error": ("simulator reported errors:\n%s" % str(stderr.decode()))}
     print("Simulation done, will now interpret results of the default scene.")
-    retq = {"scene_results": {"default": {}, "counterfactual": {}}, "error": None}
+    retq = {"scene_folder": sceneFolder, "scene_results": {"default": {}, "counterfactual": {}}, "error": None}
     frameData = [ast.literal_eval(x) for x in open(os.path.join(sceneFolder, "animation.log")).read().splitlines()]
     for name, exps in defaultExpectations.items():
         print("Evaluating expectations for %s" % name)

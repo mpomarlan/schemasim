@@ -345,7 +345,7 @@ class BlenderSimulator(phys_simulator_3D.PhysicsSimulator3D):
         retq = retq + "bpy.context.scene.render.resolution_y = 600\n"
         retq = retq + "bpy.context.scene.render.resolution_percentage = 100\n"
         retq = retq + "scene.render.image_settings.file_format = 'FFMPEG'\n"
-        retq = retq + "bpy.context.scene.render.ffmpeg.format = 'MPEG2'\n"
+        retq = retq + "bpy.context.scene.render.ffmpeg.format = 'MPEG4'\n"
         if "/" != save_folder[-1]:
             save_folder = save_folder + "/"
         retq = retq + ("bpy.context.scene.render.filepath = '%s'\n" % save_folder)

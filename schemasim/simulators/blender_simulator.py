@@ -39,7 +39,7 @@ class BlenderSimulator(phys_simulator_3D.PhysicsSimulator3D):
     def _getAngDmpPD(self, constraints):
         return [[1.0, 0.4]]
 
-    def sceneScript(self, schemas, save_folder, blender_filename=None, log_filename=None, trajectories=None, render=False):
+    def sceneScript(self, schemas, save_folder, blender_filename=None, log_filename=None, trajectories=None, render=False, nframes=250):
         dt = 1.0/24.0
         if not blender_filename:
             blender_filename = "animation.blend"
@@ -125,8 +125,8 @@ class BlenderSimulator(phys_simulator_3D.PhysicsSimulator3D):
         retq = retq + "    bpy.context.active_object.select = False\n\n"
         retq = retq + "elif 'select_set' in dir(bpy.context.active_object):"
         retq = retq + "    bpy.context.active_object.select_set(False)\n\n"
-        retq = retq + "bpy.data.scenes['Scene'].frame_end = 250\n"
-        retq = retq + "bpy.data.scenes['Scene'].rigidbody_world.point_cache.frame_end = 250\n"
+        retq = retq + ("bpy.data.scenes['Scene'].frame_end = %d\n" % nframes)
+        retq = retq + ("bpy.data.scenes['Scene'].rigidbody_world.point_cache.frame_end = %d\n" % nframes)
         for o in schemas:
             if "ParameterizedSchema" not in o._meta_type:
                 continue
@@ -179,7 +179,7 @@ class BlenderSimulator(phys_simulator_3D.PhysicsSimulator3D):
                     retq = retq + ("bpy.context.object.rigid_body.angular_damping = %f\n" % o._parameters["angular_damping"])
                     retq = retq + "bpy.ops.object.modifier_add(type='COLLISION')\n"
                     retq = retq + "bpy.ops.object.modifier_add(type='SOFT_BODY')\n"
-                    retq = retq + "bpy.context.object.modifiers['Softbody'].point_cache.frame_end = 250\n"
+                    retq = retq + ("bpy.context.object.modifiers['Softbody'].point_cache.frame_end = %d\n" % nframes)
                     retq = retq + ("bpy.context.object.modifiers['Softbody'].settings.friction = %f\n" % o._parameters["friction"])
                     retq = retq + ("bpy.context.object.modifiers['Softbody'].settings.mass = %f\n" % o._parameters["mass"])
                     retq = retq + ("bpy.context.object.modifiers['Softbody'].settings.use_goal = False\n")

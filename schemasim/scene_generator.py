@@ -236,7 +236,7 @@ def simplePrint(schema):
         return retq + ")"
     return str(schema)
 
-def interpretScene(schemas, simulator, simulate_counterfactuals=True, render=False):
+def interpretScene(schemas, simulator, simulate_counterfactuals=True, render=False, nframes=250):
     simPath = simulator.getPath()
     if not simPath:
         print("No path known to simulator; make sure environment variable %s is set" % simulator.getPathEnvironmentVariable())
@@ -279,7 +279,7 @@ def interpretScene(schemas, simulator, simulate_counterfactuals=True, render=Fal
         print("\t%s" % name)
         for e in exps:
             print("\t\t%s" % simplePrint(e))
-    script = simulator.sceneScript(enet.schemas(), sceneFolder, blender_filename="animation.blend", log_filename="animation.log", trajectories=None, render=render)
+    script = simulator.sceneScript(enet.schemas(), sceneFolder, blender_filename="animation.blend", log_filename="animation.log", trajectories=None, render=render, nframes=nframes)
     scriptPath = os.path.join(sceneFolder, "scenescript.py")
     with open(scriptPath, "w") as outfile:
         outfile.write(script)
@@ -336,7 +336,7 @@ def interpretScene(schemas, simulator, simulate_counterfactuals=True, render=Fal
                 # TODO: at the moment, the only counterfactual condition is disabling an object, but this might change ...
                 cFolder = os.path.join(counterfactualSceneFolder, "disable_"+s.getId())
                 os.mkdir(cFolder)
-                script = simulator.sceneScript(enet.schemas(), cFolder, blender_filename="animation.blend", log_filename="animation.log", trajectories=trajectories, render=render)
+                script = simulator.sceneScript(enet.schemas(), cFolder, blender_filename="animation.blend", log_filename="animation.log", trajectories=trajectories, render=render, nframes=nframes)
                 scriptPath = os.path.join(cFolder, "scenescript.py")
                 with open(scriptPath, "w") as outfile:
                     outfile.write(script)

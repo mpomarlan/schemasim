@@ -254,7 +254,8 @@ def interpretScene(schemas, simulator, simulate_counterfactuals=True, render=Fal
     if not sceneFolder:
         sceneFolder = os.path.join(workFolder, str(datetime.now()))
     print("Scene set up, will save results at %s" % sceneFolder)
-    os.mkdir(sceneFolder)
+    if not os.path.isdir(sceneFolder):
+        os.mkdir(sceneFolder)
     defaultExpectations = {}
     counterfactualExpectations = {}
     for s in enet.schemas():

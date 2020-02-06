@@ -40,6 +40,8 @@ class BlenderSimulator(phys_simulator_3D.PhysicsSimulator3D):
         return [[1.0, 0.4]]
 
     def sceneScript(self, schemas, save_folder, blender_filename=None, log_filename=None, trajectories=None, render=False, nframes=250):
+        if (not nframes) or (5 > nframes):
+            nframes = 5
         dt = 1.0/24.0
         if not blender_filename:
             blender_filename = "animation.blend"
@@ -218,7 +220,7 @@ class BlenderSimulator(phys_simulator_3D.PhysicsSimulator3D):
                         retq = retq + "bpy.ops.object.modifier_add(type='COLLISION')\n"
                     k = k + 1
         retq = retq + "\n"
-        retq = retq + "scene.frame_current = 2\n"
+        retq = retq + "scene.frame_current = 3\n"
         for o in schemas:
             if "ParameterizedSchema" not in o._meta_type:
                 continue
@@ -230,10 +232,10 @@ class BlenderSimulator(phys_simulator_3D.PhysicsSimulator3D):
                     dqx = 0.5*(o._parameters["wx"]*o._parameters["rw"]-o._parameters["wz"]*o._parameters["ry"]+o._parameters["wy"]*o._parameters["rz"])
                     dqy = 0.5*(o._parameters["wy"]*o._parameters["rw"]+o._parameters["wz"]*o._parameters["rx"]-o._parameters["wx"]*o._parameters["rz"])
                     dqz = 0.5*(o._parameters["wz"]*o._parameters["rw"]-o._parameters["wy"]*o._parameters["rx"]+o._parameters["wx"]*o._parameters["ry"])
-                    retq = retq + ("obj.location = (%f,%f,%f)\n" % (o._parameters["tx"]+dt*o._parameters["vx"], o._parameters["ty"]+dt*o._parameters["vy"], o._parameters["tz"]+dt*o._parameters["vz"]))
-                    retq = retq + ("obj.rotation_quaternion = (%f,%f,%f,%f)\n" % (o._parameters["rw"]+dt*dqw, o._parameters["rx"]+dt*dqx, o._parameters["ry"]+dt*dqy, o._parameters["rz"]+dt*dqz))
-                    retq = retq + "obj.keyframe_insert(data_path='location', frame=2)\n"
-                    retq = retq + "obj.keyframe_insert(data_path='rotation_quaternion', frame=2)\n"
+                    retq = retq + ("obj.location = (%f,%f,%f)\n" % (o._parameters["tx"]+2*dt*o._parameters["vx"], o._parameters["ty"]+2*dt*o._parameters["vy"], o._parameters["tz"]+2*dt*o._parameters["vz"]))
+                    retq = retq + ("obj.rotation_quaternion = (%f,%f,%f,%f)\n" % (o._parameters["rw"]+2*dt*dqw, o._parameters["rx"]+2*dt*dqx, o._parameters["ry"]+2*dt*dqy, o._parameters["rz"]+2*dt*dqz))
+                    retq = retq + "obj.keyframe_insert(data_path='location', frame=3)\n"
+                    retq = retq + "obj.keyframe_insert(data_path='rotation_quaternion', frame=3)\n"
                 elif has_trajectory and (2 in trajectories[o._parameters["name"]]):
                     x = trajectories[o._parameters["name"]][2]["tx"]
                     y = trajectories[o._parameters["name"]][2]["ty"]
@@ -244,8 +246,8 @@ class BlenderSimulator(phys_simulator_3D.PhysicsSimulator3D):
                     qz = trajectories[o._parameters["name"]][2]["rz"]
                     retq = retq + ("obj.location = (%f,%f,%f)\n" % (x,y,z))
                     retq = retq + ("obj.rotation_quaternion = (%f,%f,%f,%f)\n" % (qw,qx,qy,qz))
-                    retq = retq + "obj.keyframe_insert(data_path='location', frame=2)\n"
-                    retq = retq + "obj.keyframe_insert(data_path='rotation_quaternion', frame=2)\n"
+                    retq = retq + "obj.keyframe_insert(data_path='location', frame=3)\n"
+                    retq = retq + "obj.keyframe_insert(data_path='rotation_quaternion', frame=3)\n"
             elif "impulse_particles" == o._parameters["physics_type"]:
                     k = 0
                     for p in o._parameters["particles"]:
@@ -255,34 +257,34 @@ class BlenderSimulator(phys_simulator_3D.PhysicsSimulator3D):
                         retq = retq + ("obj = bpy.data.objects['%s']\n" % pname)
                         has_trajectory = trajectories and (pname in trajectories)
                         if o._parameters["has_collision"] and (not o._parameters["is_kinematic"]):
-                            retq = retq + ("obj.location = (%f,%f,%f)\n" % (p["tx"]+dt*p["vx"], p["ty"]+dt*p["vy"], p["tz"]+dt*p["vz"]))
-                            retq = retq + "obj.keyframe_insert(data_path='location', frame=2)\n"
+                            retq = retq + ("obj.location = (%f,%f,%f)\n" % (p["tx"]+2*dt*p["vx"], p["ty"]+2*dt*p["vy"], p["tz"]+2*dt*p["vz"]))
+                            retq = retq + "obj.keyframe_insert(data_path='location', frame=3)\n"
                         elif has_trajectory and (2 in trajectories[pname]):
                             x = trajectories[pname][2]["tx"]
                             y = trajectories[pname][2]["ty"]
                             z = trajectories[pname][2]["tz"]
                             retq = retq + ("obj.location = (%f,%f,%f)\n" % (x,y,z))
-                            retq = retq + "obj.keyframe_insert(data_path='location', frame=2)\n"
+                            retq = retq + "obj.keyframe_insert(data_path='location', frame=3)\n"
                         k = k + 1
         retq = retq + "\n"
-        retq = retq + "scene.frame_current = 3\n"
+        retq = retq + "scene.frame_current = 4\n"
         for o in schemas:
             if "ParameterizedSchema" not in o._meta_type:
                 continue
             if o._parameters["has_collision"] and (o._parameters["physics_type"] in ["rigid_body", "soft_body"]) and (not o._parameters["is_kinematic"]):
                 retq = retq + ("obj = bpy.data.objects['%s']\n" % o._parameters["name"])
                 retq = retq + "obj.rigid_body.kinematic = False\n"
-                retq = retq + "obj.keyframe_insert(data_path='rigid_body.kinematic', frame=3)\n"
+                retq = retq + "obj.keyframe_insert(data_path='rigid_body.kinematic', frame=4)\n"
             elif o._parameters["has_collision"] and (o._parameters["physics_type"] in ["impulse_particles"]) and (not o._parameters["is_kinematic"]):
                 k = 0
                 for p in o._parameters["particles"]:
                     pname = o._parameters["name"] + ":" + str(k)
                     retq = retq + ("obj = bpy.data.objects['%s']\n" % pname)
                     retq = retq + "obj.rigid_body.kinematic = False\n"
-                    retq = retq + "obj.keyframe_insert(data_path='rigid_body.kinematic', frame=3)\n"
+                    retq = retq + "obj.keyframe_insert(data_path='rigid_body.kinematic', frame=4)\n"
                     k = k + 1
         retq = retq + "\n"
-        for f in range(3, 251):
+        for f in range(2, nframes + 1):
             set_frame = False
             for o in schemas:
                 if "ParameterizedSchema" not in o._meta_type:

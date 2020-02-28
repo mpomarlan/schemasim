@@ -314,7 +314,8 @@ def interpretScene(schemas, simulator, simulate_counterfactuals=True, render=Fal
     if simulate_counterfactuals:
         print("Analyzing counterfactual versions of the scene")
         counterfactualSceneFolder = os.path.join(sceneFolder, "counterfactuals")
-        os.mkdir(counterfactualSceneFolder)
+        if not os.path.isdir(counterfactualSceneFolder):
+            os.mkdir(counterfactualSceneFolder)
         retq["scene_results"]["counterfactuals"] = {}
         for s in enet.schemas():
             if isinstance(s, st.ParameterizedSchema):
@@ -337,7 +338,8 @@ def interpretScene(schemas, simulator, simulate_counterfactuals=True, render=Fal
                 trajectories = s.getTrajectories(frameData)
                 # TODO: at the moment, the only counterfactual condition is disabling an object, but this might change ...
                 cFolder = os.path.join(counterfactualSceneFolder, "disable_"+s.getId())
-                os.mkdir(cFolder)
+                if not os.path.isdir(cFolder):
+                    os.mkdir(cFolder)
                 script = simulator.sceneScript(enet.schemas(), cFolder, blender_filename="animation.blend", log_filename="animation.log", trajectories=trajectories, render=render, nframes=nframes)
                 scriptPath = os.path.join(cFolder, "scenescript.py")
                 with open(scriptPath, "w") as outfile:

@@ -8,6 +8,7 @@ from datetime import datetime
 import ast
 
 import schemasim.schemas.l0_schema_templates as st
+from schemasim.schemas.l1_physics_primitives import Default, CollisionDisabled
 #import schemasim.schemas.l1_geometric_primitives as gp
 #import schemasim.schemas.l2_geometric_primitive_relations as gpr
 #import schemasim.schemas.l3_primitive_movement as pm
@@ -236,6 +237,51 @@ def simplePrint(schema):
         return retq + ")"
     return str(schema)
 
+def checkSceneExpectations(schemas, simulator, simulationLogPath, condition=Default()):
+    retq = {}
+    frameData = [ast.literal_eval(x) for x in open(simulationLogPath).read().splitlines()]
+    defaultExpectations = {}
+    counterfactualExpectations = {}
+    for s in schemas:
+        if "Expectation" == s._type:
+            name = s.getConditionObjectName()
+            if s.isCounterfactual():
+                if name not in counterfactualExpectations:
+                    counterfactualExpectations[name] = []
+                counterfactualExpectations[name].append(s)
+            else:
+                if name not in defaultExpectations:
+                    defaultExpectations[name] = []
+                defaultExpectations[name].append(s)
+    # TODO: For now, the only counterfactual condition is CollisionDisabled, but this might change in the future
+    cId = None
+    if "CollisionDisabled" == condition._type:
+        cId = condition._roles["obj"].getId()
+    currentExpectations = {}
+    if cId in counterfactualExpectations:
+        currentExpectations = {cId: counterfactualExpectations[cId]}
+        print("counterfactual expectations for %s" % cId)
+        for e in currentExpectations[cId]:
+            print("\t%s" % simplePrint(e))
+    for name, exps in defaultExpectations.items():
+        if name != cId:
+            currentExpectations[name] = exps
+            print("default expectations for %s" % name)
+            for e in currentExpectations[name]:
+                print("\t%s" % simplePrint(e))
+    for name, exps in currentExpectations.items():
+        print("Evaluating expectations for %s" % name)
+        for e in exps:
+            judgement, cost = e._roles["event"].evaluateTimeline(frameData, simulator)
+            if judgement:
+                print("\t%s: True (%s)" % (simplePrint(e), str(cost)))
+            else:
+                print("\t%s: False (%s)" % (simplePrint(e), str(cost)))
+            if name not in retq:
+                 retq[name] = []
+            retq[name].append([e, judgement, cost])
+    return retq, frameData
+
 def interpretScene(schemas, simulator, simulate_counterfactuals=True, render=False, nframes=250, sceneFolder=None):
     simPath = simulator.getPath()
     if not simPath:
@@ -256,31 +302,6 @@ def interpretScene(schemas, simulator, simulate_counterfactuals=True, render=Fal
     print("Scene set up, will save results at %s" % sceneFolder)
     if not os.path.isdir(sceneFolder):
         os.mkdir(sceneFolder)
-    defaultExpectations = {}
-    counterfactualExpectations = {}
-    for s in enet.schemas():
-        if "Expectation" == s._type:
-            name = s.getConditionObjectName()
-            if s.isCounterfactual():
-                if name not in counterfactualExpectations:
-                    counterfactualExpectations[name] = []
-                counterfactualExpectations[name].append(s)
-            else:
-                if name not in defaultExpectations:
-                    defaultExpectations[name] = []
-                defaultExpectations[name].append(s)
-    if defaultExpectations:
-        print("Default expectations of scene:")
-    for name, exps in defaultExpectations.items():
-        print("\t%s" % name)
-        for e in exps:
-            print("\t\t%s" % simplePrint(e))
-    if counterfactualExpectations:
-        print("Counterfactual expectations of scene:")
-    for name, exps in counterfactualExpectations.items():
-        print("\t%s" % name)
-        for e in exps:
-            print("\t\t%s" % simplePrint(e))
     script = simulator.sceneScript(enet.schemas(), sceneFolder, blender_filename="animation.blend", log_filename="animation.log", trajectories=None, render=render, nframes=nframes)
     scriptPath = os.path.join(sceneFolder, "scenescript.py")
     with open(scriptPath, "w") as outfile:
@@ -298,45 +319,23 @@ def interpretScene(schemas, simulator, simulate_counterfactuals=True, render=Fal
     #    print("Simulator reported errors:\n%s" % str(stderr.decode()))
     #    return {"scene_results": None, "error": ("simulator reported errors:\n%s" % str(stderr.decode()))}
     print("Simulation done, will now interpret results of the default scene.")
-    retq = {"scene_folder": sceneFolder, "scene_results": {"default": {}, "counterfactual": {}}, "error": None}
-    frameData = [ast.literal_eval(x) for x in open(os.path.join(sceneFolder, "animation.log")).read().splitlines()]
-    for name, exps in defaultExpectations.items():
-        print("Evaluating expectations for %s" % name)
-        for e in exps:
-            judgement, cost = e._roles["event"].evaluateTimeline(frameData, simulator)
-            if judgement:
-                print("\t%s: True (%s)" % (simplePrint(e), str(cost)))
-            else:
-                print("\t%s: False (%s)" % (simplePrint(e), str(cost)))
-            if name not in retq["scene_results"]["default"]:
-                 retq["scene_results"]["default"][name] = []
-            retq["scene_results"]["default"][name].append([e, judgement, cost])
+    retq = {"scene_folder": sceneFolder, "scene_results": {"default": {}, "counterfactuals": {}}, "error": None}
+    retq["scene_results"]["default"], frameData = checkSceneExpectations(enet.schemas(), simulator, os.path.join(sceneFolder, "animation.log"), condition=Default())
     if simulate_counterfactuals:
         print("Analyzing counterfactual versions of the scene")
         counterfactualSceneFolder = os.path.join(sceneFolder, "counterfactuals")
         if not os.path.isdir(counterfactualSceneFolder):
             os.mkdir(counterfactualSceneFolder)
-        retq["scene_results"]["counterfactuals"] = {}
         for s in enet.schemas():
             if isinstance(s, st.ParameterizedSchema):
                 cId = s.getId()
                 retq["scene_results"]["counterfactuals"][cId] = {}
+                hCI = s._parameters["has_collision"]
+                iKn = s._parameters["is_kinematic"]
+                # TODO: at the moment, the only counterfactual condition is disabling an object, but this might change ...
                 s._parameters["has_collision"] = 0
                 s._parameters["is_kinematic"] = 1
-                currentExpectations = {}
-                if cId in counterfactualExpectations:
-                    currentExpectations = {cId: counterfactualExpectations[cId]}
-                    print("counterfactual expectations for %s" % cId)
-                    for e in currentExpectations[cId]:
-                        print("\t%s" % simplePrint(e))
-                for name, exps in defaultExpectations.items():
-                    if name != cId:
-                        currentExpectations[name] = exps
-                        print("default expectations for %s" % name)
-                        for e in currentExpectations[name]:
-                            print("\t%s" % simplePrint(e))
                 trajectories = s.getTrajectories(frameData)
-                # TODO: at the moment, the only counterfactual condition is disabling an object, but this might change ...
                 cFolder = os.path.join(counterfactualSceneFolder, "disable_"+s.getId())
                 if not os.path.isdir(cFolder):
                     os.mkdir(cFolder)
@@ -355,19 +354,8 @@ def interpretScene(schemas, simulator, simulate_counterfactuals=True, render=Fal
                     retq["error"] = ("system error when calling simulator at %s: %s" % (simPath, str(e)))
                     return retq
                 print("Simulation done, will now interpret results of the counterfactual scene %s." % ("disabled_" + s.getId()))
-                counterfactualFrameData = [ast.literal_eval(x) for x in open(os.path.join(cFolder, "animation.log")).read().splitlines()]
-                for name, exps in currentExpectations.items():
-                    print("Evaluating expectations for %s" % name)
-                    for e in exps:
-                        judgement, cost = e._roles["event"].evaluateTimeline(counterfactualFrameData, simulator)
-                        if judgement:
-                            print("\t%s: True (%s)" % (simplePrint(e), str(cost)))
-                        else:
-                            print("\t%s: False (%s)" % (simplePrint(e), str(cost)))
-                        if name not in retq["scene_results"]["counterfactuals"][cId]:
-                            retq["scene_results"]["counterfactuals"][cId][name] = []
-                        retq["scene_results"]["counterfactuals"][cId][name].append([e, judgement, cost])
-                s._parameters["has_collision"] = 1
-                s._parameters["is_kinematic"] = 0
+                retq["scene_results"]["counterfactuals"][cId], frameDataCounterfactual = checkSceneExpectations(enet.schemas(), simulator, os.path.join(cFolder, "animation.log"), condition=CollisionDisabled(obj=s))
+                s._parameters["has_collision"] = hCI
+                s._parameters["is_kinematic"] = iKn
     return retq
 

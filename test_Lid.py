@@ -11,18 +11,19 @@ bsim = bs.BlenderSimulator()
 # A list of objects in the scene. It's useful to define this first so that schematic relations are easier to define later.
 pot = eo.Pot()
 popcorn = eo.Popcorn()
+lid = eo.Lid()
 
 # It helps to have an object to build the scene around. To create this, add some constraints on this object
 # that involve only it and the world
 aa = gpr.AxisAlignment(a=gp.WorldVerticalDirection(),b=gp.UprightDirection(obj=pot))
 
+
+cov = fc.Coverage(coveree=pot, coverer=lid)
 cont = fc.Containment(container=pot, containee=popcorn)
 
 # The order in which schemas are mentioned here is not that important, but it is important that all objects
 # and all relevant relations between them are put in
-results = sg.interpretScene([aa, pot, cont, popcorn], bsim, simulate_counterfactuals=True, nframes=300)
-
-print(results)
+results = sg.interpretScene([aa, pot, cont, popcorn, cov, lid], bsim, simulate_counterfactuals=True)
 
 # Of course, other things would be interesting to do with results, e.g. learning rules of the form
 # (qualitative description of scene) -> (qualitative description of behavior)

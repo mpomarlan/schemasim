@@ -280,7 +280,7 @@ def checkSceneExpectations(schemas, simulator, simulationLogPath, condition=Defa
             if name not in retq:
                  retq[name] = []
             retq[name].append([e, judgement, cost])
-    return retq
+    return retq, frameData
 
 def interpretScene(schemas, simulator, simulate_counterfactuals=True, render=False, nframes=250, sceneFolder=None):
     simPath = simulator.getPath()
@@ -320,7 +320,7 @@ def interpretScene(schemas, simulator, simulate_counterfactuals=True, render=Fal
     #    return {"scene_results": None, "error": ("simulator reported errors:\n%s" % str(stderr.decode()))}
     print("Simulation done, will now interpret results of the default scene.")
     retq = {"scene_folder": sceneFolder, "scene_results": {"default": {}, "counterfactuals": {}}, "error": None}
-    retq["scene_results"]["default"] = checkSceneExpectations(enet.schemas(), simulator, os.path.join(sceneFolder, "animation.log"), condition=Default())
+    retq["scene_results"]["default"], frameData = checkSceneExpectations(enet.schemas(), simulator, os.path.join(sceneFolder, "animation.log"), condition=Default())
     if simulate_counterfactuals:
         print("Analyzing counterfactual versions of the scene")
         counterfactualSceneFolder = os.path.join(sceneFolder, "counterfactuals")
@@ -354,7 +354,7 @@ def interpretScene(schemas, simulator, simulate_counterfactuals=True, render=Fal
                     retq["error"] = ("system error when calling simulator at %s: %s" % (simPath, str(e)))
                     return retq
                 print("Simulation done, will now interpret results of the counterfactual scene %s." % ("disabled_" + s.getId()))
-                retq["scene_results"]["counterfactuals"][cId] = checkSceneExpectations(enet.schemas(), simulator, os.path.join(cFolder, "animation.log"), condition=CollisionDisabled(obj=s))
+                retq["scene_results"]["counterfactuals"][cId], frameDataCounterfactual = checkSceneExpectations(enet.schemas(), simulator, os.path.join(cFolder, "animation.log"), condition=CollisionDisabled(obj=s))
                 s._parameters["has_collision"] = hCI
                 s._parameters["is_kinematic"] = iKn
     return retq

@@ -22,6 +22,8 @@ cont = fc.Containment(container=pot, containee=popcorn)
 # and all relevant relations between them are put in
 results = sg.interpretScene([aa, pot, cont, popcorn], bsim, simulate_counterfactuals=True, nframes=300)
 
+print(results)
+
 # Of course, other things would be interesting to do with results, e.g. learning rules of the form
 # (qualitative description of scene) -> (qualitative description of behavior)
 # or assigning blame/credit for observed behavior to objects in the scene

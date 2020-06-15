@@ -12,6 +12,7 @@ class Expectation(st.RoleDefiningSchema):
     def __init__(self, condition=None, event=None):
         super().__init__()
         self._type = "Expectation"
+        self._meta_type.append("Expectation")
         self._roles = {"condition": condition, "event": event}
     def getConditionObjectName(self):
         if not self._roles["condition"] or "obj" not in self._roles["condition"]._roles:

@@ -173,7 +173,7 @@ def schemaExplications(explicitSchemas, explicationCoreSchemas, simulator):
             for t in theories:
                 retq.addSchemas(t._facts)
                 mergedTheory._rules = mergedTheory._rules + t._rules
-                mergedTheory._nonfacts = mergedTheory._facts + t._nonfacts
+                mergedTheory._nonfacts = mergedTheory._nonfacts + t._nonfacts
             mergedTheory._facts = list(retq.schemas())
             mergedTheory.reason()
             conclusions = mergedTheory._facts
@@ -183,6 +183,32 @@ def schemaExplications(explicitSchemas, explicationCoreSchemas, simulator):
             for c in conclusions:
                 if c not in retq.schemas():
                     currentCoreSchemas.append(c)
+    return retq
+
+def getExpectations(schemas, simulator):
+    allFacts = SchemaNet(schemas)
+    theories = []
+    aux = []
+    for s in schemas:
+        if "FunctionalControl" in s._meta_type:
+            theories.append(s.getSchemaTheory(allFacts))
+        elif "Expectation" in s._meta_type:
+            aux.append(s)
+    mergedTheory = st.SchemaTheory()
+    mergedTheory._facts = schemas
+    for t in theories:
+        mergedTheory._rules = mergedTheory._rules + t._rules
+        mergedTheory._nonfacts = mergedTheory._nonfacts + t._nonfacts
+    mergedTheory.reason()
+    conclusions = mergedTheory._facts
+    if conclusions:
+        for c in conclusions:
+            if "Expectation" in c._meta_type:
+                aux.append(c)
+    retq = []
+    for x in aux:
+        if x not in retq:
+            retq.append(x) 
     return retq
 
 def explicateSchemas(schemas, simulator):
@@ -237,9 +263,11 @@ def simplePrint(schema):
         return retq + ")"
     return str(schema)
 
-def checkSceneExpectations(schemas, simulator, simulationLogPath, condition=Default()):
+def checkSceneExpectations(schemas, simulator, simulationLogPath, condition=Default(), explicated=False):
     retq = {}
     frameData = [ast.literal_eval(x) for x in open(simulationLogPath).read().splitlines()]
+    if not explicated:
+        schemas = getExpectations(schemas, simulator)
     defaultExpectations = {}
     counterfactualExpectations = {}
     for s in schemas:
@@ -320,7 +348,7 @@ def interpretScene(schemas, simulator, simulate_counterfactuals=True, render=Fal
     #    return {"scene_results": None, "error": ("simulator reported errors:\n%s" % str(stderr.decode()))}
     print("Simulation done, will now interpret results of the default scene.")
     retq = {"scene_folder": sceneFolder, "scene_results": {"default": {}, "counterfactuals": {}}, "error": None}
-    retq["scene_results"]["default"], frameData = checkSceneExpectations(enet.schemas(), simulator, os.path.join(sceneFolder, "animation.log"), condition=Default())
+    retq["scene_results"]["default"], frameData = checkSceneExpectations(enet.schemas(), simulator, os.path.join(sceneFolder, "animation.log"), condition=Default(), explicated=True)
     if simulate_counterfactuals:
         print("Analyzing counterfactual versions of the scene")
         counterfactualSceneFolder = os.path.join(sceneFolder, "counterfactuals")
@@ -354,7 +382,7 @@ def interpretScene(schemas, simulator, simulate_counterfactuals=True, render=Fal
                     retq["error"] = ("system error when calling simulator at %s: %s" % (simPath, str(e)))
                     return retq
                 print("Simulation done, will now interpret results of the counterfactual scene %s." % ("disabled_" + s.getId()))
-                retq["scene_results"]["counterfactuals"][cId], frameDataCounterfactual = checkSceneExpectations(enet.schemas(), simulator, os.path.join(cFolder, "animation.log"), condition=CollisionDisabled(obj=s))
+                retq["scene_results"]["counterfactuals"][cId], frameDataCounterfactual = checkSceneExpectations(enet.schemas(), simulator, os.path.join(cFolder, "animation.log"), condition=CollisionDisabled(obj=s), explicated=True)
                 s._parameters["has_collision"] = hCI
                 s._parameters["is_kinematic"] = iKn
     return retq

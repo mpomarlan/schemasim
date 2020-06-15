@@ -10,10 +10,16 @@ import schemasim.schemas.l3_location as location
 import schemasim.schemas.l4_path as path
 import schemasim.schemas.l10_expectation as expectation
 
-class Support(st.RoleDefiningSchema):
+class FunctionalControl(st.RoleDefiningSchema):
+    def __init__(self):
+        super().__init__()
+        self._meta_type.append("FunctionalControl")
+
+class Support(FunctionalControl):
     def __init__(self, supporter=None, supportee=None):
         super().__init__()
         self._type = "Support"
+        self._meta_type.append("Support")
         self._roles = {"supporter": supporter, "supportee": supportee}
     def getSchemaTheory(self, schemaNet):
         retq = super().getSchemaTheory(schemaNet)
@@ -34,10 +40,11 @@ class Support(st.RoleDefiningSchema):
         retq._rules.append({"antecedent": [self], "consequent+": es, "consequent-": None})
         return retq
 
-class Containment(st.RoleDefiningSchema):
+class Containment(FunctionalControl):
     def __init__(self, container=None, containee=None):
         super().__init__()
-        self._type = "Container"
+        self._type = "Containment"
+        self._meta_type.append("Containment")
         self._roles = {"container": container, "containee": containee}
     def getSchemaTheory(self, schemaNet):
         retq = super().getSchemaTheory(schemaNet)
@@ -58,10 +65,11 @@ class Containment(st.RoleDefiningSchema):
         retq._rules.append({"antecedent": [self], "consequent+": es, "consequent-": None})
         return retq
 
-class Coverage(st.RoleDefiningSchema):
+class Coverage(FunctionalControl):
     def __init__(self, coverer=None, coveree=None):
         super().__init__()
         self._type = "Coverage"
+        self._meta_type.append("Coverage")
         self._roles = {"coverer": coverer, "coveree": coveree}
     def getSchemaTheory(self, schemaNet):
         retq = super().getSchemaTheory(schemaNet)

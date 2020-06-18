@@ -263,9 +263,9 @@ def simplePrint(schema):
         return retq + ")"
     return str(schema)
 
-def checkSceneExpectations(schemas, simulator, simulationLogPath, condition=Default(), explicated=False):
+def checkSceneExpectations(schemas, simulator, simulationLogPath, condition=Default(), start_frame=None, end_frame=None, explicated=False):
     retq = {}
-    frameData = [ast.literal_eval(x) for x in open(simulationLogPath).read().splitlines()]
+    frameData = [ast.literal_eval(x) for x in open(simulationLogPath).read().splitlines()][start_frame:end_frame]
     if not explicated:
         schemas = getExpectations(schemas, simulator)
     defaultExpectations = {}

@@ -133,3 +133,29 @@ class Popcorn(st.ParticleSystem):
         self._parameters["v_direction"] = v_direction
         self._parameters["v_bias"] = v_bias
 
+
+class MiscellaneousRigidObject(st.ParameterizedSchema):
+    def __init__(self, name="RigidObject", object_type="MiscellaneousRigidObject", mesh="", mass=1.5, restitution=0.3, friction=0.75, linear_damping=0.4, angular_damping=0.5):
+        super().__init__()
+        self._meta_type.append(object_type)
+        self._parameters["type"] = object_type
+        self._parameters["name"] = name
+        self._parameters["mesh"] = mesh
+        self._parameters["physics_type"] = "rigid_body"
+        self._parameters["mass"] = mass
+        self._parameters["restitution"] = restitution
+        self._parameters["friction"] = friction
+        self._parameters["linear_damping"] = linear_damping
+        self._parameters["angular_damping"] = angular_damping
+        self._parameters["has_collision"] = 1
+        self._parameters["is_kinematic"] = 0
+    def getMeshPath(self, modifier=None):
+        if "mesh" not in self._parameters:
+            return None
+        path = self._parameters["mesh"]
+        if isinstance(modifier, str) and ("" != modifier):
+            path = path[:path.rfind(".")] + modifier
+        if not os.path.isfile(path):
+            return None
+        return path
+

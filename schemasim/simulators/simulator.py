@@ -116,10 +116,11 @@ class Simulator:
                 c[1] = self._space.vectorSum(c[1], self.translationVector(obj))
         orientation = self._space.identityRotation()
         for c in constraints:
-            if "PointInVolume" == c._type:
-                pd = c.filterByPointContainment(pd, orientation, self, strictness=self._space.sampleValidationStrictness())
-            if "SurfaceContainment" == c._type:
-                pd = c.filterBySurfaceContainment(pd, orientation, self, strictness=self._space.sampleValidationStrictness())
+            pd = c.filterPD(pd, orientation, self, strictness=self._space.sampleValidationStrictness())
+            #if "PointInVolume" == c._type:
+            #    pd = c.filterByPointContainment(pd, orientation, self, strictness=self._space.sampleValidationStrictness())
+            #if "SurfaceContainment" == c._type:
+            #    pd = c.filterBySurfaceContainment(pd, orientation, self, strictness=self._space.sampleValidationStrictness())
         return normalizePD(pd)
     def _getTranslationPD(self, obj, constraints, orientation):
         if not constraints:
@@ -149,10 +150,11 @@ class Simulator:
             if dims:
                 pd = pd + boxPD
         for c in constraints:
-            if "PointInVolume" == c._type:
-                pd = c.filterByPointContainment(pd, orientation, self, strictness=self._space.sampleValidationStrictness())
-            if "SurfaceContainment" == c._type:
-                pd = c.filterBySurfaceContainment(pd, orientation, self, strictness=self._space.sampleValidationStrictness())
+            pd = c.filterPD(pd, orientation, self, strictness=self._space.sampleValidationStrictness())
+            #if "PointInVolume" == c._type:
+            #    pd = c.filterByPointContainment(pd, orientation, self, strictness=self._space.sampleValidationStrictness())
+            #if "SurfaceContainment" == c._type:
+            #    pd = c.filterBySurfaceContainment(pd, orientation, self, strictness=self._space.sampleValidationStrictness())
         return normalizePD(pd)
     def _getRotationPD(self, constraints):
         constraintsInterp = []
@@ -169,7 +171,8 @@ class Simulator:
             strictness = strictness*len(constraintsInterp)
         for c in constraintsInterp:
             if c._type in ["AxisAlignment", "AxisCounterAlignment", "AxisOrthogonality"]:
-                pd = c.filterByAxisAngle(pd, self, strictness=strictness)
+                pd = c.filterPD(pd, self, strictness=strictness)
+                #pd = c.filterByAxisAngle(pd, self, strictness=strictness)
         return normalizePD(pd)
     def _getVelocityPD(self, constraints, obj):
         pd = [[1.0, self._space.nullVelocity()]]

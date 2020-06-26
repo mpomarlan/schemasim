@@ -9,6 +9,7 @@ class Location(st.RoleDefiningSchema):
     def __init__(self, locatum=None, relatum=None, spatial_modality=None):
         super().__init__()
         self._type = "Location"
+        self._meta_type.append("Location")
         self._roles = {"locatum": locatum, "relatum": relatum, "spatial_modality": spatial_modality}
     def getSchemaTheory(self, schemaNet):
         retq = super().getSchemaTheory(schemaNet)

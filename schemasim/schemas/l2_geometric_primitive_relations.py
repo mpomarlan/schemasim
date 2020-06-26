@@ -12,7 +12,9 @@ class GeometricPrimitiveRelation(st.RoleDefiningSchema):
         self._type = "GeometricPrimitiveRelation"
         self._meta_type.append("GeometricPrimitiveRelation")
     def evaluateFrame(self, frameData, simulator):
-        return False
+        return True, 1.0
+    def filterPD(self, rpd, sim, strictness=0.005):
+        return rpd
 
 class AxisRelation(GeometricPrimitiveRelation):
     def __init__(self, a=None, b=None):

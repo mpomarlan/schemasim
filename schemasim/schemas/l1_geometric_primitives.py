@@ -31,14 +31,26 @@ class GeometricPrimitive(st.RoleDefiningSchema):
                 if sem:
                     return sem
         return default
+    def getVolumeAtFrame(frameData, frame, sim):
+        return None
+    def getVolume(sim):
+        return None
+    def getPoint(self, sim, frameData={}):
+        point = None
+        mesh = None
+        if frameData:
+            mesh = self.getVolumeAtFrame([{}, frameData], 1, sim)
+        else:
+            mesh = self.getVolume(sim)
+        if mesh:
+            point = list(mesh.centroid)
+        return point
 
 class PointPrimitive(GeometricPrimitive):
     def __init__(self):
         super().__init__()
         self._type = "PointPrimitive"
         self._roles = {}
-    def getPoint(self, sim):
-        return sim.space().origin()
 
 class AxisPrimitive(GeometricPrimitive):
     def __init__(self):
@@ -156,19 +168,16 @@ class Centroid(PointPrimitive):
         super().__init__()
         self._type = "Centroid"
         self._roles = {"obj": obj}
-    def getPoint(self, sim):
-        point = super().getPoint(sim)
+    def getVolume(self, sim):
         obj = self._roles["obj"]
-        if isinstance(obj, st.ParameterizedSchema):
-            meshPath = obj.getMeshPath(modifier=sim.space().volumePathModifier())
-            if not meshPath:
-                return None
-            mesh = sim.space().loadVolume(meshPath)
-            point = list(mesh.centroid)
-            t = sim.translationVector(obj)
-            k = 0
-            point = sim.space().vectorSum(point, t)
-        return point
+        if obj and ("ParameterizedSchema" in obj._meta_type):
+            return obj.getVolume(sim)
+        return None
+    def getVolumeAtFrame(self, frameData, frame, sim):
+        obj = self._roles["obj"]
+        if obj and ("ParameterizedSchema" in obj._meta_type):
+            return obj.getVolumeAtFrame([{}, frameData], 1, sim)
+        return None
 
 class Interior(GeometricPrimitive):
     def __init__(self, obj=None):

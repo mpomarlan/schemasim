@@ -23,15 +23,6 @@ logging.config.dictConfig({
     'disable_existing_loggers': True
 })
 
-class DummyCollisionManager():
-    def __init__(self):
-        self._objs = []
-    def in_collision_single(self, mesh, pose):
-        return False
-    def add_object(self, name, mesh, pose):
-        if name not in self._objs:
-            self._objs.append(name)
-
 class SchemaNet:
     def __init__(self, orig=None):
         self._schemas = []
@@ -58,6 +49,28 @@ class SchemaNet:
                 added = True
         if added:
             self._toposorted = False
+    def _getParameterizedSchemas(self, s):
+        if not isinstance(s, st.Schema):
+            return []
+        if "ParameterizedSchema" in s._meta_type:
+            return [s]
+        elif "RoleDefiningSchema" in s._meta_type:
+            retq = []
+            for r, v in s._roles.items():
+                retq = retq + self._getParameterizedSchemas(v)
+            return retq
+        return []
+    def getParameterizedSchemas(self):
+        retq = []
+        for s in self._schemas:
+            if not isinstance(s, st.Schema):
+                continue
+            if "ParameterizedSchema" in s._meta_type:
+                retq.append(s)
+            elif "RoleDefiningSchema" in s._meta_type:
+                for r, v in s._roles.items():
+                    retq = retq + self._getParameterizedSchemas(v)
+        return retq
     def extractExplicitSchemas(self, simulator):
         parS = []
         explicitParS = []
@@ -190,7 +203,7 @@ def getExpectations(schemas, simulator):
     theories = []
     aux = []
     for s in schemas:
-        if "FunctionalControl" in s._meta_type:
+        if ("FunctionalControl" in s._meta_type) or ("Location" in s._meta_type):
             theories.append(s.getSchemaTheory(allFacts))
         elif "Expectation" in s._meta_type:
             aux.append(s)
@@ -203,7 +216,7 @@ def getExpectations(schemas, simulator):
     conclusions = mergedTheory._facts
     if conclusions:
         for c in conclusions:
-            if "Expectation" in c._meta_type:
+            if ("Expectation" in c._meta_type) or ("GeometricPrimitiveRelation" in c._meta_type):
                 aux.append(c)
     retq = []
     for x in aux:
@@ -233,11 +246,7 @@ def explicateSchemas(schemas, simulator):
             explicationCoreSchemas.append(schemaNet.popSchema())
         explicitSchemaNet = schemaExplications(explicitSchemas, explicationCoreSchemas, simulator)
         k = 0
-        try:
-            collisionManager = simulator.space().makeCollisionManager()
-        except ValueError:
-            print("Using dummy collision manager because FCL might not be installed")
-            collisionManager = DummyCollisionManager()
+        collisionManager = simulator.space().makeCollisionManager()
         while k < len(explicitSchemaNet.schemas()):
             obj = explicitSchemaNet.schemas()[k]
             if "ParameterizedSchema" in obj._meta_type:
@@ -263,11 +272,19 @@ def simplePrint(schema):
         return retq + ")"
     return str(schema)
 
-def checkSceneExpectations(schemas, simulator, simulationLogPath, condition=Default(), start_frame=None, end_frame=None, explicated=False):
-    retq = {}
+def checkSceneExpectations(schemas, simulator, simulationLogPath, condition=Default(), start_frame=None, end_frame=None, explicated=False, test_start_frame=True):
+    retq = {True: [], False:[]}
+    if isinstance(schemas, SchemaNet):
+        schemas = schemas.schemas()
+    parameterizedSchemas = {x.getId(): x for x in SchemaNet(orig=schemas).getParameterizedSchemas()}
     frameData = [ast.literal_eval(x) for x in open(simulationLogPath).read().splitlines()][start_frame:end_frame]
     if not explicated:
-        schemas = getExpectations(schemas, simulator)
+        schemas = schemaExplications([], [schemas], simulator).schemas()
+    if test_start_frame:
+        for s in schemas:
+            if "GeometricPrimitiveRelation" in s._meta_type:
+                res, q = s.evaluateFrame(frameData[0], simulator)
+                retq[res].append((s, q))
     defaultExpectations = {}
     counterfactualExpectations = {}
     for s in schemas:
@@ -300,7 +317,7 @@ def checkSceneExpectations(schemas, simulator, simulationLogPath, condition=Defa
     for name, exps in currentExpectations.items():
         print("Evaluating expectations for %s" % name)
         for e in exps:
-            judgement, cost = e._roles["event"].evaluateTimeline(frameData, simulator)
+            judgement, cost = e._roles["event"].evaluateTimeline(frameData, simulator, parameterizedSchemas=parameterizedSchemas, disabledObjects=[cId])
             if judgement:
                 print("\t%s: True (%s)" % (simplePrint(e), str(cost)))
             else:
@@ -348,7 +365,7 @@ def interpretScene(schemas, simulator, simulate_counterfactuals=True, render=Fal
     #    return {"scene_results": None, "error": ("simulator reported errors:\n%s" % str(stderr.decode()))}
     print("Simulation done, will now interpret results of the default scene.")
     retq = {"scene_folder": sceneFolder, "scene_results": {"default": {}, "counterfactuals": {}}, "error": None}
-    retq["scene_results"]["default"], frameData = checkSceneExpectations(enet.schemas(), simulator, os.path.join(sceneFolder, "animation.log"), condition=Default(), explicated=True)
+    retq["scene_results"]["default"], frameData = checkSceneExpectations(enet.schemas(), simulator, os.path.join(sceneFolder, "animation.log"), condition=Default(), explicated=True, test_start_frame=False)
     if simulate_counterfactuals:
         print("Analyzing counterfactual versions of the scene")
         counterfactualSceneFolder = os.path.join(sceneFolder, "counterfactuals")
@@ -382,7 +399,7 @@ def interpretScene(schemas, simulator, simulate_counterfactuals=True, render=Fal
                     retq["error"] = ("system error when calling simulator at %s: %s" % (simPath, str(e)))
                     return retq
                 print("Simulation done, will now interpret results of the counterfactual scene %s." % ("disabled_" + s.getId()))
-                retq["scene_results"]["counterfactuals"][cId], frameDataCounterfactual = checkSceneExpectations(enet.schemas(), simulator, os.path.join(cFolder, "animation.log"), condition=CollisionDisabled(obj=s), explicated=True)
+                retq["scene_results"]["counterfactuals"][cId], frameDataCounterfactual = checkSceneExpectations(enet.schemas(), simulator, os.path.join(cFolder, "animation.log"), condition=CollisionDisabled(obj=s), explicated=True, test_start_frame=False)
                 s._parameters["has_collision"] = hCI
                 s._parameters["is_kinematic"] = iKn
     return retq

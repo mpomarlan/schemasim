@@ -6,10 +6,21 @@ import math
 import schemasim.schemas.l0_schema_templates as st
 import schemasim.schemas.l1_geometric_primitives as gp
 
-class AxisRelation(st.RoleDefiningSchema):
+class GeometricPrimitiveRelation(st.RoleDefiningSchema):
+    def __init__(self):
+        super().__init__()
+        self._type = "GeometricPrimitiveRelation"
+        self._meta_type.append("GeometricPrimitiveRelation")
+    def evaluateFrame(self, frameData, simulator):
+        return True, 1.0
+    def filterPD(self, rpd, sim, strictness=0.005):
+        return rpd
+
+class AxisRelation(GeometricPrimitiveRelation):
     def __init__(self, a=None, b=None):
         super().__init__()
         self._type = "AxisRelation"
+        self._meta_type.append("AxisRelation")
         self._roles = {"a": a, "b": b}
         self._targetAngle = None
     def getTargetAxis(self, sim):
@@ -24,7 +35,7 @@ class AxisRelation(st.RoleDefiningSchema):
         if not sim.isExplicitSchema(self._roles["b"]):
             return self._roles["b"].getAxis(sim)
         return sim.space().verticalAxis()
-    def filterByAxisAngle(self, rpd, sim, strictness=0.005):
+    def filterPD(self, rpd, sim, strictness=0.005):
         targetAxis = self.getTargetAxis(sim)
         movingAxis = self.getMovingAxis(sim)
         space = sim.space()
@@ -36,29 +47,30 @@ class AxisRelation(st.RoleDefiningSchema):
 
 class AxisAlignment(AxisRelation):
     def __init__(self, a=None, b=None):
-        super().__init__()
+        super().__init__(a=a, b=b)
         self._type = "AxisAlignment"
-        self._roles = {"a": a, "b": b}
+        self._meta_type.append("AxisAlignment")
         self._targetAngle = 0.0
 
 class AxisCounterAlignment(AxisRelation):
     def __init__(self, a=None, b=None):
-        super().__init__()
+        super().__init__(a=a, b=b)
         self._type = "AxisCounterAlignment"
-        self._roles = {"a": a, "b": b}
+        self._meta_type.append("AxisCounterAlignment")
         self._targetAngle = math.pi
 
 class AxisOrthogonality(AxisRelation):
     def __init__(self, a=None, b=None):
-        super().__init__()
+        super().__init__(a=a, b=b)
         self._type = "AxisOrthogonality"
-        self._roles = {"a": a, "b": b}
+        self._meta_type.append("AxisOrthogonality")
         self._targetAngle = math.pi/2.0
 
-class SurfaceContainment(st.RoleDefiningSchema):
+class SurfaceContainment(GeometricPrimitiveRelation):
     def __init__(self, container_surface=None, containee_surface=None):
         super().__init__()
         self._type = "SurfaceContainment"
+        self._meta_type.append("SurfaceContainment")
         self._roles = {"container_surface": container_surface, "containee_surface": containee_surface}
     def getTargetSurfaceBounds(self, sim):
         if sim.isExplicitSchema(self._roles["container_surface"]):
@@ -75,7 +87,7 @@ class SurfaceContainment(st.RoleDefiningSchema):
             return self._roles["container_surface"].getSurface(sim)
         if not sim.isExplicitSchema(self._roles["containee_surface"]):
             return self._roles["containee_surface"].getSurface(sim)
-    def filterBySurfaceContainment(self, rpd, orientation, sim, strictness=0.005):
+    def filterPD(self, rpd, orientation, sim, strictness=0.005):
         space = sim.space()
         movingSurfaceIni = self.getMovingSurface(sim)
         movingSurface = []
@@ -92,10 +104,11 @@ class SurfaceContainment(st.RoleDefiningSchema):
             c[0] = c[0]/math.exp(cost/strictness)
         return rpd
 
-class PointInVolume(st.RoleDefiningSchema):
+class PointInVolume(GeometricPrimitiveRelation):
     def __init__(self, container_volume=None, containee_point=None):
         super().__init__()
         self._type = "PointInVolume"
+        self._meta_type.append("PointInVolume")
         self._roles = {"container_volume": container_volume, "containee_point": containee_point}
     def getMovingPoint(self, sim):
         if not sim.isExplicitSchema(self._roles["containee_point"]):
@@ -121,7 +134,7 @@ class PointInVolume(st.RoleDefiningSchema):
         if sim.isExplicitSchema(self._roles["container_volume"]):
             return self._roles["container_volume"].getVolumeBounds(sim)
         return None, None, None
-    def filterByPointContainment(self, rpd, orientation, sim, strictness=0.005):
+    def filterPD(self, rpd, orientation, sim, strictness=0.005):
         space = sim.space()
         targetPoint = self.getTargetPoint(sim)
         targetVolume = self.getTargetVolume(sim)

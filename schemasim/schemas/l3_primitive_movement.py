@@ -11,6 +11,7 @@ class PrimitiveMovement(st.RoleDefiningSchema):
     def __init__(self, obj=None, relatum=None):
         super().__init__()
         self._type = "PrimitiveMovement"
+        self._meta_type.append("PrimitiveMovement")
         self._roles = {"obj": obj, "relatum": relatum}
         self._minimize_cost = True
     def _getNormalMovement(self, extents, space):
@@ -25,7 +26,7 @@ class PrimitiveMovement(st.RoleDefiningSchema):
         if not space.volumeInclusion(objectvolume, relatumvolume):
             retq, disp = self._getDisplacementChange(cobj, crel, lastDisplacement, space)
         return retq
-    def evaluateTimeline(self, frameData, simulator):
+    def evaluateTimeline(self, frameData, simulator, parameterizedSchemas={}, disabledObjects=[]):
         space = simulator.space()
         ovolume = self._roles["obj"].getVolume(simulator)
         if not isinstance(ovolume, list):
@@ -73,6 +74,7 @@ class RelativeDepart(PrimitiveMovement):
     def __init__(self, obj=None, relatum=None):
         super().__init__(obj=obj, relatum=relatum)
         self._type = "RelativeDepart"
+        self._meta_type.append("RelativeDepart")
         self._minimize_cost = False
     def _getCostDelta(self, objectvolume, relatumvolume, cobj, crel, lastDisplacement, lastDisplacementNorm, space):
         retq = 0.0
@@ -86,6 +88,7 @@ class RelativeApproach(PrimitiveMovement):
     def __init__(self, obj=None, relatum=None):
         super().__init__(obj=obj, relatum=relatum)
         self._type = "RelativeApproach"
+        self._meta_type.append("RelativeApproach")
         self._minimize_cost = True
     def _getCostDelta(self, objectvolume, relatumvolume, cobj, crel, lastDisplacement, lastDisplacementNorm, space):
         retq = 0.0
@@ -99,6 +102,7 @@ class RelativeStillness(PrimitiveMovement):
     def __init__(self, obj=None, relatum=None):
         super().__init__(obj=obj, relatum=relatum)
         self._type = "RelativeStillness"
+        self._meta_type.append("RelativeStillness")
         self._minimize_cost = True
 
 class RelativeMovement(PrimitiveMovement):
@@ -111,6 +115,7 @@ class PrimitiveVerticalMovement(PrimitiveMovement):
     def __init__(self, obj=None, relatum=None):
         super().__init__(obj=obj, relatum=relatum)
         self._type = "PrimitiveVerticalMovement"
+        self._meta_type.append("PrimitiveVerticalMovement")
     def _getNormalMovement(self, extents, space):
         return space.verticalVectorComponent(extents)
 
@@ -118,6 +123,7 @@ class RelativeStayLevel(PrimitiveVerticalMovement):
     def __init__(self, obj=None, relatum=None):
         super().__init__(obj=obj, relatum=relatum)
         self._type = "RelativeStayLevel"
+        self._meta_type.append("RelativeStayLevel")
         self._minimize_cost = True
     def _getCostDelta(self, objectvolume, relatumvolume, cobj, crel, lastDisplacement, lastDisplacementNorm, space):
         d, v = self._getDisplacementChange(cobj, crel, lastDisplacement, space)
@@ -127,6 +133,7 @@ class RelativeFall(PrimitiveVerticalMovement):
     def __init__(self, obj=None, relatum=None):
         super().__init__(obj=obj, relatum=relatum)
         self._type = "RelativeFall"
+        self._meta_type.append("RelativeFall")
         self._minimize_cost = False
     def _getCostDelta(self, objectvolume, relatumvolume, cobj, crel, lastDisplacement, lastDisplacementNorm, space):
         retq = 0.0

@@ -2,6 +2,7 @@ import os
 import sys
 
 import math
+import random
 
 import trimesh
 
@@ -12,10 +13,24 @@ from schemasim.util.geometry import volumeInclusion
 from schemasim.util.geometry import centroid, poseFromTQ, transformVector, fibonacci_sphere, distanceFromInterior, outerAreaFromSurface
 from schemasim.util.probability_density import normalizePD, samplePD, uniformQuaternionRPD, uniformBoxRPD
 
+class DummyCollisionManager():
+    def __init__(self):
+        self._objs = []
+    def in_collision_single(self, mesh, pose):
+        return False
+    def add_object(self, name, mesh, pose):
+        if name not in self._objs:
+            self._objs.append(name)
+
 class Space3D(space.Space):
     def __init__(self, particleSamplingResolution=0.04, translationSamplingResolution=0.15, rotationSamplingResolution=0.1, speedSamplingResolution=0.1, sampleValidationStrictness=0.005, collisionPadding=0.01):
         super().__init__(translationSamplingResolution=translationSamplingResolution, rotationSamplingResolution=rotationSamplingResolution, speedSamplingResolution=speedSamplingResolution, sampleValidationStrictness=sampleValidationStrictness, collisionPadding=collisionPadding)
         return
+    def makeDefaultSmallTrajector(self):
+        r2 = math.sqrt(2)
+        s = self._translationSamplingResolution
+        return trimesh.Trimesh(vertices=[[s, 0, -s/r2], [-s, 0, -s/r2], [0, s, s/r2], [0, -s, s/r2]],
+                       faces=[[0, 1, 2], [0, 3, 1], [0, 2, 3], [1, 3, 2]])
     def loadVolume(self, path):
         if not path:
             return None
@@ -76,7 +91,13 @@ class Space3D(space.Space):
         bbox = list(volume.bounds)
         return [[bbox[0][0], bbox[1][0]], [bbox[0][1], bbox[1][1]], [bbox[0][2], bbox[1][2]]]
     def makeCollisionManager(self):
-        return trimesh.collision.CollisionManager()
+        retq = None
+        try:
+            retq = trimesh.collision.CollisionManager()
+        except ValueError:
+            print("Using dummy collision manager because FCL might not be installed")
+            retq = DummyCollisionManager()
+        return retq
     def makeRayVolumeIntersector(self, volume):
         return trimesh.ray.ray_triangle.RayMeshIntersector(volume)
 

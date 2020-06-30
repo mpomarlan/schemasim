@@ -23,15 +23,6 @@ logging.config.dictConfig({
     'disable_existing_loggers': True
 })
 
-class DummyCollisionManager():
-    def __init__(self):
-        self._objs = []
-    def in_collision_single(self, mesh, pose):
-        return False
-    def add_object(self, name, mesh, pose):
-        if name not in self._objs:
-            self._objs.append(name)
-
 class SchemaNet:
     def __init__(self, orig=None):
         self._schemas = []
@@ -58,6 +49,28 @@ class SchemaNet:
                 added = True
         if added:
             self._toposorted = False
+    def _getParameterizedSchemas(self, s):
+        if not isinstance(s, st.Schema):
+            return []
+        if "ParameterizedSchema" in s._meta_type:
+            return [s]
+        elif "RoleDefiningSchema" in s._meta_type:
+            retq = []
+            for r, v in s._roles.items():
+                retq = retq + self._getParameterizedSchemas(v)
+            return retq
+        return []
+    def getParameterizedSchemas(self):
+        retq = []
+        for s in self._schemas:
+            if not isinstance(s, st.Schema):
+                continue
+            if "ParameterizedSchema" in s._meta_type:
+                retq.append(s)
+            elif "RoleDefiningSchema" in s._meta_type:
+                for r, v in s._roles.items():
+                    retq = retq + self._getParameterizedSchemas(v)
+        return retq
     def extractExplicitSchemas(self, simulator):
         parS = []
         explicitParS = []
@@ -233,11 +246,7 @@ def explicateSchemas(schemas, simulator):
             explicationCoreSchemas.append(schemaNet.popSchema())
         explicitSchemaNet = schemaExplications(explicitSchemas, explicationCoreSchemas, simulator)
         k = 0
-        try:
-            collisionManager = simulator.space().makeCollisionManager()
-        except ValueError:
-            print("Using dummy collision manager because FCL might not be installed")
-            collisionManager = DummyCollisionManager()
+        collisionManager = simulator.space().makeCollisionManager()
         while k < len(explicitSchemaNet.schemas()):
             obj = explicitSchemaNet.schemas()[k]
             if "ParameterizedSchema" in obj._meta_type:
@@ -267,6 +276,7 @@ def checkSceneExpectations(schemas, simulator, simulationLogPath, condition=Defa
     retq = {True: [], False:[]}
     if isinstance(schemas, SchemaNet):
         schemas = schemas.schemas()
+    parameterizedSchemas = {x.getId(): x for x in SchemaNet(orig=schemas).getParameterizedSchemas()}
     frameData = [ast.literal_eval(x) for x in open(simulationLogPath).read().splitlines()][start_frame:end_frame]
     if not explicated:
         schemas = schemaExplications([], [schemas], simulator).schemas()
@@ -307,7 +317,7 @@ def checkSceneExpectations(schemas, simulator, simulationLogPath, condition=Defa
     for name, exps in currentExpectations.items():
         print("Evaluating expectations for %s" % name)
         for e in exps:
-            judgement, cost = e._roles["event"].evaluateTimeline(frameData, simulator)
+            judgement, cost = e._roles["event"].evaluateTimeline(frameData, simulator, parameterizedSchemas=parameterizedSchemas, disabledObjects=[cId])
             if judgement:
                 print("\t%s: True (%s)" % (simplePrint(e), str(cost)))
             else:

@@ -16,6 +16,8 @@ class Space:
         self._sampleValidationStrictness = sampleValidationStrictness
         self._collisionPadding = collisionPadding
         return
+    def makeDefaultSmallTrajector(self):
+        return None
     def loadVolume(self, path):
         return None
     def collisionPadding(self):
@@ -186,5 +188,67 @@ class Space:
     def makeCollisionManager(self):
         return None
     def makeRayVolumeIntersector(self, volume):
+        return None
+    def _sample(self, boundingBoxRadius):
+        retq = []
+        for k in list(range(self.dof())):
+            retq.append(random.uniform(-boundingBoxRadius, boundingBoxRadius))
+        return retq
+    def _validate(self, collisionManager, trajectorVolume, pose):
+        return not collisionManager.in_collision_single(trajectorVolume, pose)
+    def _sampleValid(self, collisionManager, trajectorVolume, boundingBoxRadius, attempts=1000):
+        for k in list(range(attempts)):
+            sample = self._sample(boundingBoxRadius)
+            if not sample:
+                return None
+            if self._validate(collisionManager, trajectorVolume, self.poseFromTR(sample, self.identityRotation())):
+                return sample
+        return None
+    def _checkLinePath(self, collisionManager, source, destination, trajectorVolume):
+        direction = self.vectorDifference(destination, source)
+        distance = self.vectorNorm(direction)
+        wps = [destination]
+        if self._translationSamplingResolution < distance:
+            count = int(distance/self._translationSamplingResolution)
+            increment = self.vectorScale(self._translationSamplingResolution/distance, direction)
+            v = source
+            for k in list(range(count)):
+                wps.append(v)
+                v = self.vectorSum(v, increment)
+        for p in wps:
+            if not self._validate(collisionManager, trajectorVolume, self.poseFromTR(p, self.identityRotation())):
+                return False
+        return True
+    def _closestPoint(self, point, points):
+        if not points:
+            return None
+        retq = points[0]
+        dMin = self.vectorNorm(self.vectorDifference(point, retq))
+        for p in points[1:]:
+            d = self.vectorNorm(self.vectorDifference(point, p))
+            if d < dMin:
+                retq = p
+                dMin = d
+        return retq
+    def planPath(self, source, destination, collisionManager, boundingBoxRadius, trajectorVolume=None, sampleAttempts=200):
+        if not trajectorVolume:
+            trajectorVolume = self.makeDefaultSmallTrajector()
+        if self._checkLinePath(collisionManager, source, destination, trajectorVolume):
+            return [self.poseFromTR(source, self.identityRotation()), self.poseFromTR(destination, self.identityRotation())]
+        sourceTree = [source]
+        destinationTree = [destination]
+        for k in list(range(sampleAttempts)):
+            sample = self._sampleValid(collisionManager, trajectorVolume, boundingBoxRadius)
+            closestSrc = self._closestPoint(sample, sourceTree)
+            closestDest = self._closestPoint(sample, destinationTree)
+            valid2Src = self._checkLinePath(collisionManager, closestSrc, sample, trajectorVolume)
+            valid2Dest = self._checkLinePath(collisionManager, sample, closestDest, trajectorVolume)
+            if valid2Src:
+                sourceTree.append(sample)
+            if valid2Dest:
+                destinationTree.append(sample)
+            if valid2Src and valid2Dest:
+                # TODO: implement Dijkstra to retrieve path
+                return True
         return None
 

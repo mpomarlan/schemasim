@@ -14,6 +14,7 @@ class ParameterizedSchema(Schema):
     def __init__(self):
         super().__init__()
         self._parameters = {}
+        self._adjustments = {"scale": None, "translation": None, "rotation": None}
         self._type = "Object"
         self._meta_type.append("ParameterizedSchema")
     def __repr__(self):
@@ -46,7 +47,7 @@ class ParameterizedSchema(Schema):
             return None
         return path
     def _getVolumeInternal(self, sim):
-        return sim.space().loadVolume(self.getMeshPath(modifier=sim.space().volumePathModifier()))
+        return sim.space().loadVolume(self.getMeshPath(modifier=sim.space().volumePathModifier()), adjustments=self._adjustments)
     def _getTransformInternal(self, sim):
         return sim.translationVector(self), sim.rotationRepresentation(self)
     def getVolumeBounds(self, sim):
@@ -107,9 +108,9 @@ class ParticleSystem(ParameterizedSchema):
             rs.append(sim.rotationRepresentation(p))
         return ts, rs
     def getVolume(self, sim):
-        if not "particles" in self._parameters:
-            return None
         basevolume = self._getVolumeInternal(sim)
+        if (not "particles" in self._parameters) or (not self._parameters["particles"]):
+            return basevolume
         ts, rs = self._getParticleTransformsInternal(sim)
         volumes = []
         for t, r in zip(ts, rs):

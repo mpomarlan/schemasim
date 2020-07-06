@@ -18,7 +18,7 @@ class Space:
         return
     def makeDefaultSmallTrajector(self):
         return None
-    def loadVolume(self, path):
+    def loadVolume(self, path, adjustments=None):
         return None
     def collisionPadding(self):
         return self._collisionPadding

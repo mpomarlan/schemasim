@@ -135,12 +135,15 @@ class Popcorn(st.ParticleSystem):
 
 
 class MiscellaneousRigidObject(st.ParameterizedSchema):
-    def __init__(self, name="RigidObject", object_type="MiscellaneousRigidObject", mesh="", mass=1.5, restitution=0.3, friction=0.75, linear_damping=0.4, angular_damping=0.5):
+    def __init__(self, name="RigidObject", object_type="MiscellaneousRigidObject", mesh="", mass=1.5, restitution=0.3, friction=0.75, linear_damping=0.4, angular_damping=0.5, scale_adjustment=None, translation_adjustment=None, rotation_adjustment=None):
         super().__init__()
         self._meta_type.append(object_type)
         self._parameters["type"] = object_type
         self._parameters["name"] = name
         self._parameters["mesh"] = mesh
+        self._adjustments["scale"] = scale_adjustment
+        self._adjustments["translation"] = translation_adjustment
+        self._adjustments["rotation"] = rotation_adjustment
         self._parameters["physics_type"] = "rigid_body"
         self._parameters["mass"] = mass
         self._parameters["restitution"] = restitution

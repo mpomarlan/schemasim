@@ -6,6 +6,8 @@ import numpy as np
 
 import math
 
+from schemasim.util.geometry import quaternion2AxisAngle
+
 import schemasim.simulators.physics_simulator_3D as phys_simulator_3D
 import schemasim.schemas.l0_schema_templates as st
 import schemasim.schemas.l1_geometric_primitives as gp
@@ -55,8 +57,16 @@ class BlenderSimulator(phys_simulator_3D.PhysicsSimulator3D):
         retq = retq + "import sys\n"
         retq = retq + "import json\n"
         retq = retq + "import ast\n\n"
+        retq = retq + "from mathutils import Vector, Matrix\n\n"
         retq = retq + "def leetHAXX(err):\n"
         retq = retq + "    return ast.literal_eval(err.args[0][err.args[0].find('not found in ') + len('not found in '):])\n"
+        retq = retq + "def RotateAboutPoint(obj, point, axis, angle):\n"
+        retq = retq + "    translation = Vector(point)\n"
+        retq = retq + "    rotation = Matrix.Rotation(angle, 4, Vector(axis))\n"
+        retq = retq + "    for vert in obj.data.vertices:\n"
+        retq = retq + "        vert.co = vert.co-translation\n"
+        retq = retq + "        vert.co.rotate(rotation)\n"
+        retq = retq + "        vert.co = vert.co+translation\n"
         retq = retq + "bpy.context.scene.render.fps = 24\n"
         retq = retq + "bpy.context.scene.render.fps_base = 1\n"
         retq = retq + "bpy.ops.rigidbody.world_add()\n"
@@ -136,8 +146,24 @@ class BlenderSimulator(phys_simulator_3D.PhysicsSimulator3D):
                 retq = retq + ("bpy.ops.wm.collada_import(filepath='%s')\n" % o.getMeshPath(modifier=""))
                 retq = retq + ("bpy.context.active_object.name = '%s'\n" % o.getId())
                 retq = retq + ("new_obj = bpy.data.objects['%s']\n" % o.getId())
-                retq = retq + ("new_obj.location = (%f,%f,%f)\n" % (o._parameters["tx"], o._parameters["ty"], o._parameters["tz"]))
+                retq = retq + ("new_obj.location = (0,0,0)\n")
                 retq = retq + "bpy.context.object.rotation_mode = 'QUATERNION'\n"
+                retq = retq + ("new_obj.rotation_quaternion = (1,0,0,0)\n")
+                if o._sim_adjustments["scale"] or o._sim_adjustments["translation"] or o._sim_adjustments["rotation"]:
+                    if o._sim_adjustments["scale"]:
+                        retq = retq + "bpy.ops.object.editmode_toggle()\n"
+                        retq = retq + "bpy.ops.mesh.select_all(action='SELECT')\n"
+                        retq = retq + ("bpy.ops.transform.resize(value=(%f,%f,%f))\n" % (o._sim_adjustments["scale"][0], o._sim_adjustments["scale"][1], o._sim_adjustments["scale"][2]))
+                        retq = retq + "bpy.ops.object.editmode_toggle()\n"
+                    if o._sim_adjustments["rotation"]:
+                        axis, angle = quaternion2AxisAngle(o._sim_adjustments["rotation"])
+                        retq = retq + ("RotateAboutPoint(new_obj, (0,0,0), (%f,%f,%f), %f)\n" % (axis[0], axis[1], axis[2], angle))
+                    if o._sim_adjustments["translation"]:
+                        retq = retq + "bpy.ops.object.editmode_toggle()\n"
+                        retq = retq + "bpy.ops.mesh.select_all(action='SELECT')\n"
+                        retq = retq + ("bpy.ops.transform.translate(value=(%f,%f,%f))\n" % (o._sim_adjustments["translation"][0], o._sim_adjustments["translation"][1], o._sim_adjustments["translation"][2]))
+                        retq = retq + "bpy.ops.object.editmode_toggle()\n"
+                retq = retq + ("new_obj.location = (%f,%f,%f)\n" % (o._parameters["tx"], o._parameters["ty"], o._parameters["tz"]))
                 retq = retq + ("new_obj.rotation_quaternion = (%f,%f,%f,%f)\n" % (o._parameters["rw"], o._parameters["rx"], o._parameters["ry"], o._parameters["rz"]))
                 retq = retq + "new_obj.keyframe_insert(data_path='location', frame=1)\n"
                 retq = retq + "new_obj.keyframe_insert(data_path='rotation_quaternion', frame=1)\n"

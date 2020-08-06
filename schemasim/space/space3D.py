@@ -10,7 +10,7 @@ import schemasim.space.space as space
 
 from schemasim.util.geometry import volumeInclusion
 
-from schemasim.util.geometry import centroid, poseFromTQ, transformVector, fibonacci_sphere, distanceFromInterior, outerAreaFromSurface
+from schemasim.util.geometry import centroid, poseFromTQ, scaleMatrix, flipMatrix, transformVector, fibonacci_sphere, distanceFromInterior, outerAreaFromSurface
 from schemasim.util.probability_density import normalizePD, samplePD, uniformQuaternionRPD, uniformBoxRPD
 
 class DummyCollisionManager():
@@ -31,10 +31,24 @@ class Space3D(space.Space):
         s = self._translationSamplingResolution
         return trimesh.Trimesh(vertices=[[s, 0, -s/r2], [-s, 0, -s/r2], [0, s, s/r2], [0, -s, s/r2]],
                        faces=[[0, 1, 2], [0, 3, 1], [0, 2, 3], [1, 3, 2]])
-    def loadVolume(self, path):
+    def loadVolume(self, path, adjustments=None):
         if not path:
             return None
-        return trimesh.load(path)
+        mesh = trimesh.load(path)
+        if adjustments:
+            if ("scale" in adjustments) and adjustments["scale"]:
+                mesh = mesh.apply_transform(scaleMatrix(adjustments["scale"]))
+            if ("flip" in adjustments) and adjustments["flip"]:
+                mesh = mesh.apply_transform(flipMatrix(adjustments["flip"]))
+            if (("translation" in adjustments) and adjustments["translation"]) or (("rotation" in adjustments) and adjustments["rotation"]):
+                translation = self.nullVector()
+                rotation = self.identityRotation()
+                if ("translation" in adjustments) and adjustments["translation"]:
+                    translation = adjustments["translation"]
+                if ("rotation" in adjustments) and adjustments["rotation"]:
+                    rotation = adjustments["rotation"]
+                mesh = mesh.apply_transform(poseFromTQ(translation, rotation))
+        return mesh
     def semanticPathModifier(self):
         return ".sem3D"
     def volumePathModifier(self):

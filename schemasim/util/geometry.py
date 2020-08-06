@@ -4,6 +4,15 @@ import numpy as np
 
 import trimesh
 
+def quaternion2AxisAngle(q):
+    angle = 2 * math.acos(q[3])
+    n = math.sqrt(1-q[3]*q[3])
+    axis = [0,0,0]
+    axis[0] = q[0] / n
+    axis[1] = q[1] / n
+    axis[2] = q[2] / n
+    return axis, angle
+
 def distanceFromPoint(a, b):
     dx = a[0] - b[0]
     dy = a[1] - b[1]
@@ -19,6 +28,21 @@ def overlappingCells(a, b):
     yOverlap = (a[1] <= b[1] + 0.3) and (b[1] - 0.3 <= a[1])
     zOverlap = (a[2] <= b[2] + 0.3) and (b[2] - 0.3 <= a[2])
     return xOverlap and yOverlap and zOverlap
+
+def scaleMatrix(scale):
+    return [[scale[0], 0, 0, 0], [0, scale[1], 0, 0], [0, 0, scale[2], 0], [0, 0, 0, 1]]
+
+def flipMatrix(flip):
+    fx = 1
+    fy = 1
+    fz = 1
+    if (0 in flip) or ('x' in flip) or ('X' in flip):
+        fx = -1
+    if (1 in flip) or ('y' in flip) or ('Y' in flip):
+        fy = -1
+    if (2 in flip) or ('z' in flip) or ('Z' in flip):
+        fz = -1
+    return [[fx, 0, 0, 0], [0, fy, 0, 0], [0, 0, fz, 0], [0, 0, 0, 1]]
 
 def poseFromTQ(t, q):
     pose = [[1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]]

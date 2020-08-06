@@ -32,6 +32,18 @@ def overlappingCells(a, b):
 def scaleMatrix(scale):
     return [[scale[0], 0, 0, 0], [0, scale[1], 0, 0], [0, 0, scale[2], 0], [0, 0, 0, 1]]
 
+def flipMatrix(flip):
+    fx = 1
+    fy = 1
+    fz = 1
+    if (0 in flip) or ('x' in flip) or ('X' in flip):
+        fx = -1
+    if (1 in flip) or ('y' in flip) or ('Y' in flip):
+        fy = -1
+    if (2 in flip) or ('z' in flip) or ('Z' in flip):
+        fz = -1
+    return [[fx, 0, 0, 0], [0, fy, 0, 0], [0, 0, fz, 0], [0, 0, 0, 1]]
+
 def poseFromTQ(t, q):
     pose = [[1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]]
     x = q[0]

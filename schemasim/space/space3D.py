@@ -10,7 +10,7 @@ import schemasim.space.space as space
 
 from schemasim.util.geometry import volumeInclusion
 
-from schemasim.util.geometry import centroid, poseFromTQ, scaleMatrix, transformVector, fibonacci_sphere, distanceFromInterior, outerAreaFromSurface
+from schemasim.util.geometry import centroid, poseFromTQ, scaleMatrix, flipMatrix, transformVector, fibonacci_sphere, distanceFromInterior, outerAreaFromSurface
 from schemasim.util.probability_density import normalizePD, samplePD, uniformQuaternionRPD, uniformBoxRPD
 
 class DummyCollisionManager():
@@ -38,6 +38,8 @@ class Space3D(space.Space):
         if adjustments:
             if ("scale" in adjustments) and adjustments["scale"]:
                 mesh = mesh.apply_transform(scaleMatrix(adjustments["scale"]))
+            if ("flip" in adjustments) and adjustments["flip"]:
+                mesh = mesh.apply_transform(flipMatrix(adjustments["flip"]))
             if (("translation" in adjustments) and adjustments["translation"]) or (("rotation" in adjustments) and adjustments["rotation"]):
                 translation = self.nullVector()
                 rotation = self.identityRotation()

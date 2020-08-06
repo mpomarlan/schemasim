@@ -14,7 +14,8 @@ class ParameterizedSchema(Schema):
     def __init__(self):
         super().__init__()
         self._parameters = {}
-        self._adjustments = {"scale": None, "translation": None, "rotation": None}
+        self._adjustments = {"scale": None, "translation": None, "rotation": None, "flip": None}
+        self._sim_adjustments = {"scale": None, "translation": None, "rotation": None, "flip": None}
         self._type = "Object"
         self._meta_type.append("ParameterizedSchema")
     def __repr__(self):

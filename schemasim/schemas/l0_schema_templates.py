@@ -21,7 +21,8 @@ class ParameterizedSchema(Schema):
     def __repr__(self):
         s = self._type + "("
         for k in sorted(self._parameters.keys()):
-            s = s + ("%s=%s," % (str(k), str(self._parameters[k])))
+            if k in ["name", "id", "type"]:
+                s = s + ("%s=%s," % (str(k), str(self._parameters[k])))
         return s + ")"
     def __eq__(self, other):
         if not super().__eq__(other):
@@ -86,7 +87,8 @@ class ParticleSystem(ParameterizedSchema):
     def __repr__(self):
         s = self._type + "("
         for k in sorted(self._parameters.keys()):
-            s = s + ("%s=%s," % (str(k), str(self._parameters[k])))
+            if k in ["name", "id", "type"]:
+                s = s + ("%s=%s," % (str(k), str(self._parameters[k])))
         return s + ")"
     def _getFrameData(self, frame):
         name = self.getId()
@@ -153,7 +155,8 @@ class VariableSchema(ParameterizedSchema):
     def __repr__(self):
         s = self._type + "("
         for k in sorted(self._parameters.keys()):
-            s = s + ("%s=%s," % (str(k), str(self._parameters[k])))
+            if k in ["name", "id", "type"]:
+                s = s + ("%s=%s," % (str(k), str(self._parameters[k])))
         return s + ")"
 
 class SchemaTheory:

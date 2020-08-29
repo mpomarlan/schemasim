@@ -20,8 +20,8 @@ import schemasim.schemas.l2_geometric_primitive_relations as gpr
 import schemasim.objects.example_objects as eo
 
 class BlenderSimulator(phys_simulator_3D.PhysicsSimulator3D):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, particleSamplingResolution=0.04, translationSamplingResolution=0.1, rotationSamplingResolution=0.1, speedSamplingResolution=0.1, sampleValidationStrictness=0.005, collisionPadding=0.005):
+        super().__init__(particleSamplingResolution=particleSamplingResolution, translationSamplingResolution=translationSamplingResolution, rotationSamplingResolution=rotationSamplingResolution, speedSamplingResolution=speedSamplingResolution, sampleValidationStrictness=sampleValidationStrictness, collisionPadding=collisionPadding)
         return
     def getPathEnvironmentVariable(self):
         return "BLENDER_PATH"
@@ -151,10 +151,9 @@ class BlenderSimulator(phys_simulator_3D.PhysicsSimulator3D):
                 retq = retq + ("new_obj.rotation_quaternion = (1,0,0,0)\n")
                 if o._sim_adjustments["scale"] or o._sim_adjustments["translation"] or o._sim_adjustments["rotation"]:
                     if o._sim_adjustments["scale"]:
-                        retq = retq + "bpy.ops.object.editmode_toggle()\n"
-                        retq = retq + "bpy.ops.mesh.select_all(action='SELECT')\n"
-                        retq = retq + ("bpy.ops.transform.resize(value=(%f,%f,%f))\n" % (o._sim_adjustments["scale"][0], o._sim_adjustments["scale"][1], o._sim_adjustments["scale"][2]))
-                        retq = retq + "bpy.ops.object.editmode_toggle()\n"
+                        retq = retq + ("new_obj.scale[0] = %f\n" % (o._sim_adjustments["scale"][0]))
+                        retq = retq + ("new_obj.scale[1] = %f\n" % (o._sim_adjustments["scale"][1]))
+                        retq = retq + ("new_obj.scale[2] = %f\n" % (o._sim_adjustments["scale"][2]))
                     if o._sim_adjustments["rotation"]:
                         axis, angle = quaternion2AxisAngle(o._sim_adjustments["rotation"])
                         retq = retq + ("RotateAboutPoint(new_obj, (0,0,0), (%f,%f,%f), %f)\n" % (axis[0], axis[1], axis[2], angle))

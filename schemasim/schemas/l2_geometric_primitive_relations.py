@@ -35,6 +35,13 @@ class AxisRelation(GeometricPrimitiveRelation):
         if not sim.isExplicitSchema(self._roles["b"]):
             return self._roles["b"].getAxis(sim)
         return sim.space().verticalAxis()
+    def evaluateFrame(self, frameData, sim):
+        aAxis = self._roles["a"].getAxisAtFrame(frameData, sim)
+        bAxis = self._roles["b"].getAxisAtFrame(frameData, sim)
+        space = sim.space()
+        angle = math.acos(space.vectorDotProduct(aAxis, bAxis))
+        score = math.exp(-math.fabs(angle - self._targetAngle))
+        return (math.exp(-math.fabs(0.1)) < score), score
     def filterPD(self, rpd, sim, strictness=0.005):
         targetAxis = self.getTargetAxis(sim)
         movingAxis = self.getMovingAxis(sim)
@@ -83,10 +90,10 @@ class SurfaceContainment(GeometricPrimitiveRelation):
         if sim.isExplicitSchema(self._roles["containee_surface"]):
             return self._roles["containee_surface"].getSurface(sim)
     def getMovingSurface(self, sim):
-        if not sim.isExplicitSchema(self._roles["container_surface"]):
-            return self._roles["container_surface"].getSurface(sim)
         if not sim.isExplicitSchema(self._roles["containee_surface"]):
             return self._roles["containee_surface"].getSurface(sim)
+        if not sim.isExplicitSchema(self._roles["container_surface"]):
+            return self._roles["container_surface"].getSurface(sim)
     def filterPD(self, rpd, orientation, sim, strictness=0.005):
         space = sim.space()
         movingSurfaceIni = self.getMovingSurface(sim)
@@ -96,6 +103,15 @@ class SurfaceContainment(GeometricPrimitiveRelation):
         targetSurface = self.getTargetSurface(sim)
         if not movingSurface:
             return None
+        ## TODO: replace to this
+        ## movingArray, dims, plane = space.surfaceToImage(movingSurface)
+        ## targetArray, dims, plane = space.surfaceToImage(targetSurface, paddingDims=dims)
+        ## res = scipy.fft.fftconvolve(targetArray, movingArray, mode="valid")
+        ## for c in rpd:
+        ##     coords = space.getImageCoords(c[1],dims,plane)
+        ##     if coords:
+        ##         cost = max(0, len(movingSurface)-res.item(*coords))
+        ##         c[0] = c[0]/math.exp(cost/strictness)
         for c in rpd:
             movedSurface = []
             for e in movingSurface:
@@ -103,6 +119,11 @@ class SurfaceContainment(GeometricPrimitiveRelation):
             cost = space.outerAreaFromSurface(movedSurface, targetSurface)
             c[0] = c[0]/math.exp(cost/strictness)
         return rpd
+    def evaluateFrame(self, frameData, simulator):
+        erSurface = self._roles["container_surface"].getSurfaceAtFrame(frameData, simulator)
+        eeSurface = self._roles["containee_surface"].getSurfaceAtFrame(frameData, simulator)
+        cost = simulator.space().outerAreaFromSurface(eeSurface, erSurface)
+        return (0.1>cost), cost
 
 class PointInVolume(GeometricPrimitiveRelation):
     def __init__(self, container_volume=None, containee_point=None):
@@ -166,4 +187,9 @@ class PointInVolume(GeometricPrimitiveRelation):
             c[0] = 2.0*c[0]/(1.0 + math.pow(1.0 + d, 6*space.dof()))
             last = c[1]
         return rpd
+    def evaluateFrame(self, frameData, simulator):
+        erVolume = self._roles["container_volume"].getVolumeAtFrame([{}, frameData], 1, simulator)
+        eePoint = self._roles["containee_point"].getPoint(simulator, frameData=frameData)
+        cost = simulator.space().distanceFromInterior(eePoint, erVolume, simulator.space().makeRayVolumeIntersector(erVolume))/simulator.space().boundaryBoxDiameter(simulator.space().volumeBounds(erVolume))
+        return (0.01>cost), cost
 

@@ -13,10 +13,10 @@ from schemasim.util.geometry import centroid, poseFromTQ, transformVector, fibon
 from schemasim.util.probability_density import normalizePD, samplePD, uniformQuaternionRPD, uniformBoxRPD
 
 class PhysicsSimulator3D(phys_simulator.PhysicsSimulator):
-    def __init__(self):
+    def __init__(self, particleSamplingResolution=0.04, translationSamplingResolution=0.1, rotationSamplingResolution=0.1, speedSamplingResolution=0.1, sampleValidationStrictness=0.005, collisionPadding=0.005):
         super().__init__()
         self._resolutionParticlePD = None
-        self._space = space.Space3D()
+        self._space = space.Space3D(particleSamplingResolution=particleSamplingResolution, translationSamplingResolution=translationSamplingResolution, rotationSamplingResolution=rotationSamplingResolution, speedSamplingResolution=speedSamplingResolution, sampleValidationStrictness=sampleValidationStrictness, collisionPadding=collisionPadding)
         return
     def typeName(self):
         return "PhysicsSimulator3D"

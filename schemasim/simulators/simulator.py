@@ -236,10 +236,6 @@ class Simulator:
             densityMapConstraints.pop("particle_region_position")
             # Rotation and translation need special handling
             gPDOrientation = self._densityGenerationFns["rotation"](densityMapConstraints["rotation"])
-            print(obj._parameters["name"])
-            for e in gPDOrientation:
-                if 0.1 < e[0]:
-                    print(e)
             if not gPDOrientation:
                 return False
             done = False

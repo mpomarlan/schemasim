@@ -106,9 +106,9 @@ class SurfaceContainment(GeometricPrimitiveRelation):
         ## TODO: replace to this
         ## movingArray, dims, plane = space.surfaceToImage(movingSurface)
         ## targetArray, dims, plane = space.surfaceToImage(targetSurface, paddingDims=dims)
-        ## res = scipy.fft.fftconvolve(targetArray, movingArray, mode="valid")
+        ## res = scipy.signal.fftconvolve(targetArray, movingArray, mode="valid")
         ## for c in rpd:
-        ##     coords = space.getImageCoords(c[1],dims,plane)
+        ##     coords = space.getPointInHyperplaneCoords(c[1], plane)
         ##     if coords:
         ##         cost = max(0, len(movingSurface)-res.item(*coords))
         ##         c[0] = c[0]/math.exp(cost/strictness)

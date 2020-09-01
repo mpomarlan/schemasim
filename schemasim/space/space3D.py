@@ -36,16 +36,16 @@ class Space3D(space.Space):
             return None
         mesh = trimesh.load(path)
         if adjustments:
-            if ("scale" in adjustments) and adjustments["scale"]:
+            if ("scale" in adjustments) and (None!=adjustments["scale"]):
                 mesh = mesh.apply_transform(scaleMatrix(adjustments["scale"]))
-            if ("flip" in adjustments) and adjustments["flip"]:
+            if ("flip" in adjustments) and (None!=adjustments["flip"]):
                 mesh = mesh.apply_transform(flipMatrix(adjustments["flip"]))
-            if (("translation" in adjustments) and adjustments["translation"]) or (("rotation" in adjustments) and adjustments["rotation"]):
+            if (("translation" in adjustments) and (None!=adjustments["translation"])) or (("rotation" in adjustments) and (None!=adjustments["rotation"])):
                 translation = self.nullVector()
                 rotation = self.identityRotation()
-                if ("translation" in adjustments) and adjustments["translation"]:
+                if ("translation" in adjustments) and (None!=adjustments["translation"]):
                     translation = adjustments["translation"]
-                if ("rotation" in adjustments) and adjustments["rotation"]:
+                if ("rotation" in adjustments) and (None!=adjustments["rotation"]):
                     rotation = adjustments["rotation"]
                 mesh = mesh.apply_transform(poseFromTQ(translation, rotation))
         return mesh

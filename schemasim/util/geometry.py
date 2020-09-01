@@ -7,6 +7,8 @@ import trimesh
 def quaternion2AxisAngle(q):
     angle = 2 * math.acos(q[3])
     n = math.sqrt(1-q[3]*q[3])
+    if 0.0001 > n:
+        return [0,0,1],0
     axis = [0,0,0]
     axis[0] = q[0] / n
     axis[1] = q[1] / n

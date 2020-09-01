@@ -205,7 +205,7 @@ class Simulator:
             if not collisionManager.in_collision_single(mesh, pose):
                 name = "Object_%d" % (len(collisionManager._objs))
                 if addToScene:
-                    collisionManager.add_object(name, mesh, pose)
+                    collisionManager.add_object(name, mesh, np.array(pose,dtype=np.double))
                 translation = self._space.vectorDifference(translation, origin)
                 self._assignTranslation(obj, [True], [[1.0, translation]])
                 self._assignRotation(obj, [True], [[1.0, rotation]])

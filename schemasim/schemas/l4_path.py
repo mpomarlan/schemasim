@@ -7,6 +7,8 @@ import schemasim.schemas.l2_geometric_primitive_relations as gpr
 import schemasim.schemas.l3_primitive_movement as pm
 import schemasim.schemas.l3_location as location
 
+import numpy as np
+
 class Path(st.RoleDefiningSchema):
     def __init__(self, source=None, destination=None):
         super().__init__()
@@ -40,7 +42,7 @@ class Path(st.RoleDefiningSchema):
                 mesh = space.loadVolume(parameterizedSchemas[nameK].getMeshPath(modifier=space.volumePathModifier()))
                 t = sim.translationVector(data)
                 pose = space.poseFromTR(t, sim.rotationRepresentation(data))
-                collisionManager.add_object(name, mesh, pose)
+                collisionManager.add_object(name, mesh, np.array(pose,dtype=np.double))
                 newRadius = 0.5*space.boundaryBoxDiameter(space.volumeBounds(mesh)) + space.vectorNorm(t)
                 if maximumRadius < newRadius:
                     maximumRadius = newRadius

@@ -3,6 +3,8 @@ import sys
 
 import math
 
+import scipy.signal
+
 import schemasim.schemas.l0_schema_templates as st
 import schemasim.schemas.l1_geometric_primitives as gp
 
@@ -104,20 +106,30 @@ class SurfaceContainment(GeometricPrimitiveRelation):
         if not movingSurface:
             return None
         ## TODO: replace to this
-        ## movingArray, dims, plane = space.surfaceToImage(movingSurface)
-        ## targetArray, dims, plane = space.surfaceToImage(targetSurface, paddingDims=dims)
-        ## res = scipy.signal.fftconvolve(targetArray, movingArray, mode="valid")
-        ## for c in rpd:
-        ##     coords = space.getPointInHyperplaneCoords(c[1], plane)
-        ##     if coords:
-        ##         cost = max(0, len(movingSurface)-res.item(*coords))
-        ##         c[0] = c[0]/math.exp(cost/strictness)
+        movingArray, paddingDims, plane, normal = space.surfaceToImage(movingSurface)
+        weightMoving = movingArray.sum()
+        targetArray, dims, plane, normal = space.surfaceToImage(targetSurface, paddingDims=paddingDims, normal=normal)
+        res = scipy.signal.fftconvolve(targetArray, movingArray, mode="same")
         for c in rpd:
-            movedSurface = []
-            for e in movingSurface:
-                movedSurface.append(space.translateVector(e, c[1]))
-            cost = space.outerAreaFromSurface(movedSurface, targetSurface)
-            c[0] = c[0]/math.exp(cost/strictness)
+            coords = space.getPointInHyperplaneCoords(c[1], plane, pixelate=True,dims=res.shape)
+            if coords:
+                cost = max(0, (weightMoving-res[tuple(coords)])/weightMoving)
+                try:
+                    # TODO: figure out why the shape looks like it does. Shouldn't this adjustment be dof-dependent?
+                    # Why then is an exp necessary to produce a distribution that biases towards the center?
+                    c[0] = c[0]/math.exp(cost*20)#/strictness)
+                    #c[0] = c[0]*math.pow(res[tuple(coords)]/weightMoving, 3*sim.space().dof()-3)
+                except OverflowError:
+                    c[0] = 0
+            else:
+                c[0] = 0
+        ## This is the old code, just for quick backup
+        ## for c in rpd:
+        ##     movedSurface = []
+        ##     for e in movingSurface:
+        ##         movedSurface.append(space.translateVector(e, c[1]))
+        ##     cost = space.outerAreaFromSurface(movedSurface, targetSurface)
+        ##     c[0] = c[0]/math.exp(cost/strictness)
         return rpd
     def evaluateFrame(self, frameData, simulator):
         erSurface = self._roles["container_surface"].getSurfaceAtFrame(frameData, simulator)

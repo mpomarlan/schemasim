@@ -151,6 +151,7 @@ class BlenderSimulator(phys_simulator_3D.PhysicsSimulator3D):
                 retq = retq + ("new_obj.rotation_quaternion = (1,0,0,0)\n")
                 if (None!=o._sim_adjustments["scale"]) or (None!=o._sim_adjustments["translation"]) or (None!=o._sim_adjustments["rotation"]):
                     if (None!=o._sim_adjustments["scale"]):
+                        retq = retq + "new_obj.keyframe_insert(data_path='scale', frame=1)\n"
                         retq = retq + ("new_obj.scale[0] = %f\n" % (o._sim_adjustments["scale"][0]))
                         retq = retq + ("new_obj.scale[1] = %f\n" % (o._sim_adjustments["scale"][1]))
                         retq = retq + ("new_obj.scale[2] = %f\n" % (o._sim_adjustments["scale"][2]))

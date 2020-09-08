@@ -158,6 +158,7 @@ class BlenderSimulator(phys_simulator_3D.PhysicsSimulator3D):
                     if (None!=o._sim_adjustments["rotation"]):
                         axis, angle = quaternion2AxisAngle(o._sim_adjustments["rotation"])
                         retq = retq + ("RotateAboutPoint(new_obj, (0,0,0), (%f,%f,%f), %f)\n" % (axis[0], axis[1], axis[2], angle))
+                        #retq = retq + ("RotateAboutPoint(new_obj, 0.125 * sum((Vector(b) for b in new_obj.bound_box), Vector()), (%f,%f,%f), %f)\n" % (axis[0], axis[1], axis[2], angle))
                     if (None!=o._sim_adjustments["translation"]):
                         retq = retq + "bpy.ops.object.editmode_toggle()\n"
                         retq = retq + "bpy.ops.mesh.select_all(action='SELECT')\n"

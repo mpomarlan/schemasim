@@ -40,7 +40,7 @@ class GeometricPrimitive(st.RoleDefiningSchema):
     def getVolumeAtFrame(self, frameData, frame, sim):
         obj = self._roles["obj"]
         if obj and ("ParameterizedSchema" in obj._meta_type):
-            return obj.getVolumeAtFrame([{}, frameData], 1, sim)
+            return obj.getVolumeAtFrame([{}, frameData[frame]], 1, sim)
         return None
     def getPoint(self, sim, frameData={}):
         point = None
@@ -53,9 +53,9 @@ class GeometricPrimitive(st.RoleDefiningSchema):
             if isinstance(mesh, list):
                 point = sim.space().origin()
                 for m in mesh:
-                    point = sim.space.vectorSum(point, list(m.centroid))
+                    point = sim.space().vectorSum(point, list(m.centroid))
                 if 0 < len(mesh):
-                    point = sim.space.vectorScale(1.0/len(mesh), point)
+                    point = sim.space().vectorScale(1.0/len(mesh), point)
             else:
                 point = list(mesh.centroid)
         return point
@@ -74,7 +74,7 @@ class AxisPrimitive(GeometricPrimitive):
         self._meta_type.append("AxisPrimitive")
         self._roles = {}
     def getAxis(self, sim):
-        return sim.space.verticalAxis()
+        return sim.space().verticalAxis()
     def getAxisAtFrame(self, frameData, sim):
         return sim.space().verticalAxis()
 

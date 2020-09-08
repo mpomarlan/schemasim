@@ -3,6 +3,7 @@ import sys
 
 import math
 import numpy as np
+from numpy.linalg import svd
 
 import itertools
 
@@ -251,4 +252,68 @@ class Space:
                 # TODO: implement Dijkstra to retrieve path
                 return True
         return None
+    def getPointInHyperplaneCoords(self, p, plane, pixelate=False, dims=None):
+        origin = self.origin()
+        if "origin" in plane:
+            origin = plane["origin"]
+        v = self.vectorDifference(p, origin)
+        retq = [self.vectorDotProduct(v,x) for x in plane["axes"]]
+        if pixelate:
+            retq = [int(x/self._translationSamplingResolution) for x in retq]
+        if pixelate and (None!=dims):
+            for c,d in zip(retq,dims):
+                if (0>c) or (d <= c):
+                    return None
+        return retq
+    def planeFit(self, points):
+        """
+        p, n = planeFit(points)
+
+        Given an array, points, of shape (d,...)
+        representing points in d-dimensional space,
+        fit an d-dimensional plane to the points.
+        Return a point, p, on the plane (the point-cloud centroid),
+        and the normal, n.
+        """
+        pointsP = points
+        points = np.array(points).transpose()
+        points = np.reshape(points, (np.shape(points)[0], -1)) # Collapse trialing dimensions
+        ctr = points.mean(axis=1)
+        if points.shape[0] > points.shape[1]:
+            return list(ctr), self.verticalAxis()
+        x = points - ctr[:,np.newaxis]
+        M = np.dot(x, x.T) # Could also use np.cov(x) here.
+        return ctr, svd(M)[0][:,-1]
+    def surfaceToImage(self, surface, paddingDims=None,normal=None):
+        c,n = self.planeFit(surface)
+        if normal:
+            if 0 > self.vectorDotProduct(n,normal):
+                n = self.vectorScale(-1,n)
+        vs = self.orthogonalBasis(n)
+        dims = [0]*(len(c)-1)
+        maxs = [0]*(len(c)-1)
+        mins = [0]*(len(c)-1)
+        for p in surface:
+            p = self.getPointInHyperplaneCoords(p, {"origin":c, "axes": vs}, pixelate=True)
+            for k, e in enumerate(p):
+                if maxs[k] < e:
+                    maxs[k] = e
+                if mins[k] > e:
+                    mins[k] = e
+        for k, xs in enumerate(zip(mins, maxs)):
+            m, M = xs
+            dims[k] = M - m + 1
+        if None != paddingDims:
+            dims = [x+2*(y-1) for x,y in zip(dims, paddingDims)]
+        for d,v in zip(dims, vs):
+            c = self.vectorSum(c, self.vectorScale(-0.5*d*self._translationSamplingResolution, v))
+        retq = np.zeros(dims)
+        plane = {"origin": c, "axes": vs}
+        for p in surface:
+            try:
+                retq[tuple(self.getPointInHyperplaneCoords(p, plane, pixelate=True))] = 1.0
+            except IndexError:
+                ## Can ignore out of bounds pixels; rare and just mean the mapping math above just unfortunately places a point too close to the edge.
+                continue
+        return retq, dims, plane, normal
 

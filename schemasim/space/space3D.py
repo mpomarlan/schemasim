@@ -36,10 +36,6 @@ class Space3D(space.Space):
             return None
         mesh = trimesh.load(path)
         if adjustments:
-            if ("scale" in adjustments) and (None!=adjustments["scale"]):
-                mesh = mesh.apply_transform(scaleMatrix(adjustments["scale"]))
-            if ("flip" in adjustments) and (None!=adjustments["flip"]):
-                mesh = mesh.apply_transform(flipMatrix(adjustments["flip"]))
             if (("translation" in adjustments) and (None!=adjustments["translation"])) or (("rotation" in adjustments) and (None!=adjustments["rotation"])):
                 translation = self.nullVector()
                 rotation = self.identityRotation()
@@ -48,6 +44,11 @@ class Space3D(space.Space):
                 if ("rotation" in adjustments) and (None!=adjustments["rotation"]):
                     rotation = adjustments["rotation"]
                 mesh = mesh.apply_transform(poseFromTQ(translation, rotation))
+            if ("scale" in adjustments) and (None!=adjustments["scale"]):
+                mesh = mesh.apply_transform(scaleMatrix(adjustments["scale"]))
+            if ("flip" in adjustments) and (None!=adjustments["flip"]):
+                mesh = mesh.apply_transform(flipMatrix(adjustments["flip"]))
+        mesh.export("./stuff.stl")
         return mesh
     def semanticPathModifier(self):
         return ".sem3D"

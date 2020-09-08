@@ -151,12 +151,14 @@ class BlenderSimulator(phys_simulator_3D.PhysicsSimulator3D):
                 retq = retq + ("new_obj.rotation_quaternion = (1,0,0,0)\n")
                 if (None!=o._sim_adjustments["scale"]) or (None!=o._sim_adjustments["translation"]) or (None!=o._sim_adjustments["rotation"]):
                     if (None!=o._sim_adjustments["scale"]):
+                        retq = retq + "new_obj.keyframe_insert(data_path='scale', frame=1)\n"
                         retq = retq + ("new_obj.scale[0] = %f\n" % (o._sim_adjustments["scale"][0]))
                         retq = retq + ("new_obj.scale[1] = %f\n" % (o._sim_adjustments["scale"][1]))
                         retq = retq + ("new_obj.scale[2] = %f\n" % (o._sim_adjustments["scale"][2]))
                     if (None!=o._sim_adjustments["rotation"]):
                         axis, angle = quaternion2AxisAngle(o._sim_adjustments["rotation"])
                         retq = retq + ("RotateAboutPoint(new_obj, (0,0,0), (%f,%f,%f), %f)\n" % (axis[0], axis[1], axis[2], angle))
+                        #retq = retq + ("RotateAboutPoint(new_obj, 0.125 * sum((Vector(b) for b in new_obj.bound_box), Vector()), (%f,%f,%f), %f)\n" % (axis[0], axis[1], axis[2], angle))
                     if (None!=o._sim_adjustments["translation"]):
                         retq = retq + "bpy.ops.object.editmode_toggle()\n"
                         retq = retq + "bpy.ops.mesh.select_all(action='SELECT')\n"

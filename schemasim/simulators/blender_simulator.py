@@ -60,6 +60,11 @@ class BlenderSimulator(phys_simulator_3D.PhysicsSimulator3D):
         retq = retq + "from mathutils import Vector, Matrix\n\n"
         retq = retq + "def leetHAXX(err):\n"
         retq = retq + "    return ast.literal_eval(err.args[0][err.args[0].find('not found in ') + len('not found in '):])\n"
+        retq = retq + "def ScaleVertices(obj, scale):\n"
+        retq = retq + "    for vert in obj.data.vertices:\n"
+        retq = retq + "        vert.co[0] = vert.co[0]*scale[0]\n"
+        retq = retq + "        vert.co[1] = vert.co[1]*scale[1]\n"
+        retq = retq + "        vert.co[2] = vert.co[2]*scale[2]\n"
         retq = retq + "def RotateAboutPoint(obj, point, axis, angle):\n"
         retq = retq + "    translation = Vector(point)\n"
         retq = retq + "    rotation = Matrix.Rotation(angle, 4, Vector(axis))\n"
@@ -150,11 +155,6 @@ class BlenderSimulator(phys_simulator_3D.PhysicsSimulator3D):
                 retq = retq + "bpy.context.object.rotation_mode = 'QUATERNION'\n"
                 retq = retq + ("new_obj.rotation_quaternion = (1,0,0,0)\n")
                 if (None!=o._sim_adjustments["scale"]) or (None!=o._sim_adjustments["translation"]) or (None!=o._sim_adjustments["rotation"]):
-                    if (None!=o._sim_adjustments["scale"]):
-                        retq = retq + "new_obj.keyframe_insert(data_path='scale', frame=1)\n"
-                        retq = retq + ("new_obj.scale[0] = %f\n" % (o._sim_adjustments["scale"][0]))
-                        retq = retq + ("new_obj.scale[1] = %f\n" % (o._sim_adjustments["scale"][1]))
-                        retq = retq + ("new_obj.scale[2] = %f\n" % (o._sim_adjustments["scale"][2]))
                     if (None!=o._sim_adjustments["rotation"]):
                         axis, angle = quaternion2AxisAngle(o._sim_adjustments["rotation"])
                         retq = retq + ("RotateAboutPoint(new_obj, (0,0,0), (%f,%f,%f), %f)\n" % (axis[0], axis[1], axis[2], angle))
@@ -164,6 +164,8 @@ class BlenderSimulator(phys_simulator_3D.PhysicsSimulator3D):
                         retq = retq + "bpy.ops.mesh.select_all(action='SELECT')\n"
                         retq = retq + ("bpy.ops.transform.translate(value=(%f,%f,%f))\n" % (o._sim_adjustments["translation"][0], o._sim_adjustments["translation"][1], o._sim_adjustments["translation"][2]))
                         retq = retq + "bpy.ops.object.editmode_toggle()\n"
+                    if (None!=o._sim_adjustments["scale"]):
+                        retq = retq + ("ScaleVertices(new_obj, (%f, %f, %f))\n" % (o._sim_adjustments["scale"][0], o._sim_adjustments["scale"][1], o._sim_adjustments["scale"][2]))
                 retq = retq + ("new_obj.location = (%f,%f,%f)\n" % (o._parameters["tx"], o._parameters["ty"], o._parameters["tz"]))
                 retq = retq + ("new_obj.rotation_quaternion = (%f,%f,%f,%f)\n" % (o._parameters["rw"], o._parameters["rx"], o._parameters["ry"], o._parameters["rz"]))
                 retq = retq + "new_obj.keyframe_insert(data_path='location', frame=1)\n"

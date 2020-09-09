@@ -48,7 +48,7 @@ class Space3D(space.Space):
                 mesh = mesh.apply_transform(scaleMatrix(adjustments["scale"]))
             if ("flip" in adjustments) and (None!=adjustments["flip"]):
                 mesh = mesh.apply_transform(flipMatrix(adjustments["flip"]))
-        mesh.export("./stuff.stl")
+        #mesh.export("./stuff.stl")
         return mesh
     def semanticPathModifier(self):
         return ".sem3D"

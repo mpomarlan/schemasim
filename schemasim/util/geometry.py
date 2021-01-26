@@ -4,6 +4,14 @@ import numpy as np
 
 import trimesh
 
+def angleDiff(target, current):
+    retq = target - current
+    if math.pi < retq:
+        retq = retq - 2*math.pi
+    elif -math.pi > retq:
+        retq = retq + 2*math.pi
+    return retq
+
 def quaternion2AxisAngle(q):
     angle = 2 * math.acos(q[3])
     n = math.sqrt(1-q[3]*q[3])
@@ -46,6 +54,13 @@ def flipMatrix(flip):
         fz = -1
     return [[fx, 0, 0, 0], [0, fy, 0, 0], [0, 0, fz, 0], [0, 0, 0, 1]]
 
+def poseFrom2DTQ(t, q):
+    c = math.cos(q)
+    s = math.sin(q)
+    pose = [[c,-s,t[0]],[s,c,t[1]],[0,0,1]]
+    pose = np.array(pose)
+    return pose
+
 def poseFromTQ(t, q):
     pose = [[1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]]
     x = q[0]
@@ -84,6 +99,15 @@ def transformVector(v, t, q):
         for j in list(range(4)):
             rv[k] = rv[k] + pose[k][j]*nv[j]
     return rv[:3]
+
+def transform2DVector(v, t, q):
+    pose = poseFrom2DTQ(t, q)
+    rv = [0,0,0]
+    nv = v + [1.0]
+    for k in list(range(3)):
+        for j in list(range(3)):
+            rv[k] = rv[k] + pose[k][j]*nv[j]
+    return rv[:2]
 
 def centroid(points):
     centroid = [0.0,0.0,0.0]

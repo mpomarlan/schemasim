@@ -7,6 +7,103 @@ from numpy.linalg import svd
 
 import itertools
 
+import heapq
+
+class PointValidator:
+    def __init__(self):
+        return
+    def isValid(self, point):
+        return True
+
+class GraphPoint:
+    def __init__(self, valid):
+        self.valid = valid
+
+class PointGraph:
+    def __init__(self):
+        self._points = {}
+    def pointId2EmbeddingCoordinates(self, pointId):
+        return []
+    def embeddingCoordinates2PointId(self, coordinates):
+        return ()
+    def _outgoingNeighbors(self, pointId):
+        return {}
+    def outgoingNeighbors(self, pointId):
+        if pointId not in self._points:
+            return {}
+        return self._outgoingNeighbors(pointId)
+    def _incomingNeighbors(self, pointId):
+        return {}
+    def incomingNeighbors(self, pointId):
+        if pointId not in self._points:
+            return {}
+        return self._incomingNeighbors(pointId)
+    def _travelTime(self, idA, idB):
+        return None
+    def travelTime(self, idA, idB):
+        if (idA not in self._points) or (idB not in self._points):
+            return None
+        return self._travelTime(idA, idB)
+    def _graphIngressPoints(self, coordinates):
+        return {}
+    def _graphEgressPoints(self, coordinates):
+        return {}
+    def graphIngressPoints(self, coordinates):
+        return self._graphIngressPoints(coordinates)
+    def graphEgressPoints(self, coordinates):
+        return self._graphEgressPoints(coordinates)
+
+class TimedPointGraph:
+    def __init__(self, pointGraph, idTimePairs):
+        self._pointGraph = pointGraph
+        self._points = {}
+        self._computed = False
+        for n in self._pointGraph._points.keys():
+            self._points[n] = None
+        self.computeTimes(idTimePairs)
+    def pointTime(self, pId):
+        if pId not in self._points:
+            return None
+        return self._points[pId]
+    def computeTimes(self, idTimePairs):
+        if self._computed:
+            for n in self._pointGraph._points.keys():
+                self._points[n] = None
+        # run Dijkstra algorithm
+        #  initialize from idTimePairs; these are the possible start locations
+        toVisit = []
+        for p, t in idTimePairs.items():
+            heapq.heappush(toVisit, (t, p))
+        #  run the algorithm proper
+        while toVisit:
+            t, p = heapq.heappop(toVisit)
+            if p not in self._points:
+                continue
+            oldTime = self._points[p]
+            if (None == oldTime) or (t < oldTime):
+                self._points[p] = t
+                for idx, stepTime in self._pointGraph.outgoingNeighbors(p).items():
+                    heapq.heappush(toVisit, (t+stepTime, idx))
+    def generatePath(self, pointId):
+        if (pointId not in self._points) or (None == self._points[pointId]):
+            return None
+        retq = [pointId]
+        crId = pointId
+        minT = self._points[pointId]
+        while True:
+            minId = None
+            for n in self._pointGraph.incomingNeighbors(crId).keys():
+                if (n in self._points) and (None != self._points[n]) and (minT > self._points[n]):
+                    minT = self._points[n]
+                    minId = n
+            if None == minId:
+               break
+            else:
+                crId = minId
+                retq.append(crId)
+        retq.reverse()
+        return retq
+
 class Space:
     def __init__(self, particleSamplingResolution=0.04, translationSamplingResolution=0.1, rotationSamplingResolution=0.1, speedSamplingResolution=0.1, sampleValidationStrictness=0.005, collisionPadding=0.005):
         super().__init__()

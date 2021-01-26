@@ -22,6 +22,91 @@ class DummyCollisionManager():
         if name not in self._objs:
             self._objs.append(name)
 
+# A grid of points in 3D space with orientations. Connections between points are bidirectional.
+class Grid3D(space.PointGraph):
+    def __init__(self, planes=10, lines=10, cols=10, resolution=1, xBack=0, yLeft=0, zDown=0, gridQ=(0, 0, 0, 1), validator=None, velocity=1):
+        super().__init__()
+        self._points = {}
+        self._validator = validator
+        self._resolution = resolution
+        self._planes = planes
+        self._lines = lines
+        self._cols = cols
+        self._xBack = xBack
+        self._yLeft = yLeft
+        self._zDown = zDown
+        self._velocity = velocity
+        self._gridQ = gridQ
+        self._iX = transformVector((self._resolution, 0, 0), (0,0,0), self._gridQ)
+        self._iY = transformVector((0, self._resolution, 0), (0,0,0), self._gridQ)
+        self._iZ = transformVector((0, 0, self._resolution), (0,0,0), self._gridQ)
+        if not validator:
+            self._validator = space.PointValidator()
+        for p in range(self._planes):
+            for l in range(self._lines):
+                for c in range(self._cols):
+                    pointId = (c, l, p)
+                    self._points[pointId] = space.GraphPoint(self._validator.isValid(self.pointId2EmbeddingCoordinates(pointId)))
+    def pointId2EmbeddingCoordinates(self, pointId):
+        return [self._xBack + self._iX[0]*pointId[0] + self._iY[0]*pointId[1] + self._iZ[0]*pointId[2], self._yLeft + self._iX[1]*pointId[0] + self._iY[1]*pointId[1] + self._iZ[1]*pointId[2], self._zDown + self._iX[2]*pointId[0] + self._iY[2]*pointId[1] + self._iZ[2]*pointId[2]]
+    def embeddingCoordinates2PointId(self, coordinates):
+        dx = coordinates[0]-self._xBack
+        dy = coordinates[1]-self._yLeft
+        dz = coordinates[2]-self._zDown
+        m = transformVector((dx, dy, dz), (0, 0, 0), (self._gridQ[0], self._gridQ[1], self._gridQ[2], -self._gridQ[3]))
+        return (round(m[0]/self._resolution), round(m[1]/self._resolution), round(m[2]/self._resolution))
+    def _possibleArrayIncrements(self, pointId):
+        pX = [0]
+        pY = [0]
+        pZ = [0]
+        if 0 < pointId[0]:
+            pX.append(-1)
+        if self._cols-1 > pointId[0]:
+            pX.append(1)
+        if 0 < pointId[1]:
+            pY.append(-1)
+        if self._lines-1 > pointId[1]:
+            pY.append(1)
+        if 0 < pointId[2]:
+            pZ.append(-1)
+        if self._planes-1 > pointId[2]:
+            pZ.append(1)
+        return pX, pY, pZ
+    def _outgoingNeighbors(self, pointId):
+        pX, pY, pZ = self._possibleArrayIncrements(pointId)
+        for px in pX:
+            for py in pY:
+                for pz in pZ:
+                    if (0 == px) and (0 == py) and (0 ==pz):
+                        continue
+                    retq.append((pointId[0] + px, pointId[1] + py, pointId[2] + pz))
+        return {x: self.travelTime(pointId, x) for x in retq if ((x in self._points) and self._points[x].valid)}
+    def _incomingNeighbors(self, pointId):
+        return self._outgoingNeighbors(pointId)
+    def _travelTime(self, idA, idB):
+        dx = idB[0] - idA[0]
+        dy = idB[1] - idA[1]
+        dz = idB[2] - idA[2]
+        d = math.sqrt(dx*dx + dy*dy + dz*dz)*self._resolution
+        return d/self._velocity
+    def _graphIngressPoints(self, coordinates):
+        retq = {}
+        pId = self.embeddingCoordinates2PointId(coordinates)
+        for iz in [-1,0,1]:
+            for iy in [-1,0,1]:
+                for ix in [-1,0,1]:
+                    nId = (pId[0]+ix, pId[1]+iy, pId[2]+iz)
+                    pS = self.pointId2EmbeddingCoordinates(nId)
+                    dx = (pS[0] - coordinates[0])
+                    dy = (pS[1] - coordinates[1])
+                    dz = (pS[2] - coordinates[2])
+                    d = math.sqrt(dx*dx + dy*dy)
+                    if (nId in self._points) and (self._points[nId].valid):
+                        retq[nId] = d/self._velocity
+        return retq
+    def _graphEgressPoints(self, coordinates):
+        return self._graphIngressPoints(coordinates)
+
 class Space3D(space.Space):
     def __init__(self, particleSamplingResolution=0.04, translationSamplingResolution=0.15, rotationSamplingResolution=0.1, speedSamplingResolution=0.1, sampleValidationStrictness=0.005, collisionPadding=0.01):
         super().__init__(translationSamplingResolution=translationSamplingResolution, rotationSamplingResolution=rotationSamplingResolution, speedSamplingResolution=speedSamplingResolution, sampleValidationStrictness=sampleValidationStrictness, collisionPadding=collisionPadding)

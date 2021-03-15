@@ -73,6 +73,7 @@ class Grid3D(space.PointGraph):
             pZ.append(1)
         return pX, pY, pZ
     def _outgoingNeighbors(self, pointId):
+        retq = []
         pX, pY, pZ = self._possibleArrayIncrements(pointId)
         for px in pX:
             for py in pY:

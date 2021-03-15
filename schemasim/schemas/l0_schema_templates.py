@@ -18,6 +18,18 @@ class ParameterizedSchema(Schema):
         self._sim_adjustments = {"scale": None, "translation": None, "rotation": None, "flip": None}
         self._type = "Object"
         self._meta_type.append("ParameterizedSchema")
+    def unplace(self, sim):
+        retq = ParameterizedSchema()
+        retq._parameters = self._parameters.copy()
+        retq._adjustments = self._adjustments
+        retq._sim_adjustments = self._sim_adjustments
+        retq._type = self._type
+        retq._meta_type = self._meta_type
+        for a in ['velocity', 'translation', 'rotation', 'angular_velocity']:
+            for p in sim._getParamset(a):
+                if p in retq._parameters:
+                    retq._parameters.pop(p)
+        return retq
     def __repr__(self):
         s = self._type + "("
         for k in sorted(self._parameters.keys()):
@@ -43,8 +55,9 @@ class ParameterizedSchema(Schema):
         path = self._parameters["mesh"]
         if isinstance(modifier, str) and ("" != modifier):
             path = path[:path.rfind(".")] + modifier
-        path = os.path.join("../meshes", path)
-        path = os.path.join(os.path.dirname(__file__), path)
+        if not (path and ("/" == path[0])):
+            path = os.path.join("../meshes", path)
+            path = os.path.join(os.path.dirname(__file__), path)
         if not os.path.isfile(path):
             return None
         return path
@@ -52,6 +65,13 @@ class ParameterizedSchema(Schema):
         return sim.space().loadVolume(self.getMeshPath(modifier=sim.space().volumePathModifier()), adjustments=self._adjustments)
     def _getTransformInternal(self, sim):
         return sim.translationVector(self), sim.rotationRepresentation(self)
+    def getPoint(self, sim, frameData={}):
+        retq = sim.space().nullVector()
+        if frameData:
+            retq = sim.translationVector(frameData)
+        elif sim.isExplicitObject(self):
+            retq = sim.translationVector(self)
+        return retq
     def getVolumeBounds(self, sim):
         t, r = self._getTransformInternal(sim)
         return sim.space().volumeBounds(self._getVolumeInternal(sim)), t, r

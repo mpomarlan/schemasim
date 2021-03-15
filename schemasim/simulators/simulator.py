@@ -300,6 +300,8 @@ class Simulator:
     def isExplicitObject(self, obj):
         return True
     def isExplicitSchema(self, schema):
+        if "ParameterizedSchema" in schema._meta_type:
+            return self.isExplicitObject(schema)
         if self.isExplicatableSchema(schema):
             for k,v in schema._roles.items():
                 if not hasattr(v, "_meta_type"):

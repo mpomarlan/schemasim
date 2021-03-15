@@ -13,10 +13,71 @@ class GeometricPrimitiveRelation(st.RoleDefiningSchema):
         super().__init__()
         self._type = "GeometricPrimitiveRelation"
         self._meta_type.append("GeometricPrimitiveRelation")
-    def evaluateFrame(self, frameData, simulator):
+    def evaluateFrame(self, frameData, sim):
         return True, 1.0
     def filterPD(self, rpd, sim, strictness=0.005):
         return rpd
+
+class PointRelation(GeometricPrimitiveRelation):
+    def __init__(self, a=None, b=None):
+        super().__init__()
+        self._type = "PointRelation"
+        self._meta_type.append("PointRelation")
+        self._roles = {"a": a, "b": b}
+    def _scoreFn(self, d, D):
+        return 1.0
+    def getTargetPoint(self, sim):
+        if sim.isExplicitSchema(self._roles["a"]):
+            return self._roles["a"].getPoint(sim)
+        if sim.isExplicitSchema(self._roles["b"]):
+            return self._roles["b"].getPoint(sim)
+        return sim.space().nullVector()
+    def getMovingPoint(self, sim):
+        if not sim.isExplicitSchema(self._roles["a"]):
+            return self._roles["a"].getPoint(sim)
+        if not sim.isExplicitSchema(self._roles["b"]):
+            return self._roles["b"].getPoint(sim)
+        return sim.space().nullVector()
+    def evaluateFrame(self, frameData, sim):
+        aPoint = self._roles["a"].getPoint(sim, frameData)
+        bPoint = self._roles["b"].getPoint(sim, frameData)
+        aD = sim.space().boundaryBoxDiameter(sim.space().volumeBounds(self._roles["a"].getVolume(sim)))
+        bD = sim.space().boundaryBoxDiameter(sim.space().volumeBounds(self._roles["b"].getVolume(sim)))
+        d = sim.space().vectorNorm(sim.space().vectorDifference(aPoint, bPoint))
+        D = aD + bD
+        score = self._scoreFn(d, D)
+        return (self._scoreFn(0.1*D, D) < score), score
+    def filterPD(self, rpd, sim, strictness=0.005):
+        space = sim.space()
+        rPoint = self.getTargetPoint(sim)
+        aD = space.boundaryBoxDiameter(space.volumeBounds(self._roles["a"].getVolume(sim)))
+        bD = space.boundaryBoxDiameter(space.volumeBounds(self._roles["b"].getVolume(sim)))
+        D = aD + bD
+        for c in rpd:
+            d = space.vectorNorm(space.vectorDifference(c[1], rPoint))
+            c[0] = c[0]*self._scoreFn(d, D)
+        return rpd
+
+class PointProximity(PointRelation):
+    def __init__(self, a=None, b=None):
+        super().__init__()
+        self._type = "PointProximity"
+        self._meta_type.append("PointProximity")
+        self._roles = {"a": a, "b": b}
+    def _scoreFn(self, d, D):
+        xD = math.pow(D, 2)
+        xd = math.pow(d, 2)
+        return xD/(xD+xd)
+
+class PointDistance(PointRelation):
+    def __init__(self, a=None, b=None):
+        super().__init__()
+        self._type = "PointDistance"
+        self._meta_type.append("PointDistance")
+    def _scoreFn(self, d, D):
+        xD = math.pow(D, 2)
+        xd = math.pow(d, 2)
+        return xd/(xD+xd)
 
 class AxisRelation(GeometricPrimitiveRelation):
     def __init__(self, a=None, b=None):
@@ -75,6 +136,58 @@ class AxisOrthogonality(AxisRelation):
         self._meta_type.append("AxisOrthogonality")
         self._targetAngle = math.pi/2.0
 
+class AxisDirection(GeometricPrimitiveRelation):
+    def __init__(self, axis=None, point=None):
+        super().__init__()
+        self._type = "AxisDirection"
+        self._meta_type.append("AxisDirection")
+        self._roles = {"axis": axis, "point": point}
+        self._targetAngle = None
+    def evaluateFrame(self, frameData, sim):
+        space = sim.space()
+        aAxis = self._roles["axis"].getAxisAtFrame(frameData, sim)
+        aPoint = self._roles["axis"].getPoint(sim, frameData)
+        bPoint = self._roles["point"].getPoint(sim, frameData)
+        abAxis = space.vectorNormalize(space.vectorDifference(bPoint, aPoint))
+        angle = math.acos(space.vectorDotProduct(aAxis, abAxis))
+        score = math.exp(-math.fabs(angle - self._targetAngle))
+        return (math.exp(-math.fabs(0.1)) < score), score
+    def filterPD(self, rpd, sim, strictness=0.005):
+        space = sim.space()
+        explicitAxis = sim.isExplicitSchema(self._roles["axis"])
+        explicitPoint = sim.isExplicitSchema(self._roles["point"])
+        aPoint = None
+        aAxis = self._roles["axis"].getAxis(sim)
+        if explicitAxis:
+            aPoint = self._roles["axis"].getPoint(sim)
+        bPoint = None
+        if explicitPoint:
+            bPoint = self._roles["point"].getPoint(sim)
+        for c in rpd:
+            if explicitAxis:
+                bPoint = c[1]
+            if explicitPoint:
+                aPoint = c[1]
+                aAxis = space.transformVector(self._roles["axis"].getAxis(sim), space.nullVector(), c[2])
+            abAxis = space.vectorNormalize(space.vectorDifference(bPoint, aPoint))
+            angle = math.acos(space.vectorDotProduct(aAxis, abAxis))
+            c[0] = c[0]*math.exp(-math.fabs(angle - self._targetAngle)/strictness)
+        return rpd
+
+class AxisPointingTo(AxisDirection):
+    def __init__(self, axis=None, point=None):
+        super().__init__(axis=axis, point=point)
+        self._type = "AxisPointingTo"
+        self._meta_type.append("AxisPointingTo")
+        self._targetAngle = 0
+
+class AxisPointingAwayFrom(AxisDirection):
+    def __init__(self, axis=None, point=None):
+        super().__init__(axis=axis, point=point)
+        self._type = "AxisPointingAwayFrom"
+        self._meta_type.append("AxisPointingAwayFrom")
+        self._targetAngle = math.pi
+
 class SurfaceContainment(GeometricPrimitiveRelation):
     def __init__(self, container_surface=None, containee_surface=None):
         super().__init__()
@@ -131,10 +244,10 @@ class SurfaceContainment(GeometricPrimitiveRelation):
         ##     cost = space.outerAreaFromSurface(movedSurface, targetSurface)
         ##     c[0] = c[0]/math.exp(cost/strictness)
         return rpd
-    def evaluateFrame(self, frameData, simulator):
-        erSurface = self._roles["container_surface"].getSurfaceAtFrame(frameData, simulator)
-        eeSurface = self._roles["containee_surface"].getSurfaceAtFrame(frameData, simulator)
-        cost = simulator.space().outerAreaFromSurface(eeSurface, erSurface)
+    def evaluateFrame(self, frameData, sim):
+        erSurface = self._roles["container_surface"].getSurfaceAtFrame(frameData, sim)
+        eeSurface = self._roles["containee_surface"].getSurfaceAtFrame(frameData, sim)
+        cost = sim.space().outerAreaFromSurface(eeSurface, erSurface)
         return (0.1>cost), cost
 
 class PointInVolume(GeometricPrimitiveRelation):
@@ -199,9 +312,9 @@ class PointInVolume(GeometricPrimitiveRelation):
             c[0] = 2.0*c[0]/(1.0 + math.pow(1.0 + d, 6*space.dof()))
             last = c[1]
         return rpd
-    def evaluateFrame(self, frameData, simulator):
-        erVolume = self._roles["container_volume"].getVolumeAtFrame([{}, frameData], 1, simulator)
-        eePoint = self._roles["containee_point"].getPoint(simulator, frameData=frameData)
-        cost = simulator.space().distanceFromInterior(eePoint, erVolume, simulator.space().makeRayVolumeIntersector(erVolume))/simulator.space().boundaryBoxDiameter(simulator.space().volumeBounds(erVolume))
+    def evaluateFrame(self, frameData, sim):
+        erVolume = self._roles["container_volume"].getVolumeAtFrame([{}, frameData], 1, sim)
+        eePoint = self._roles["containee_point"].getPoint(sim, frameData=frameData)
+        cost = sim.space().distanceFromInterior(eePoint, erVolume, sim.space().makeRayVolumeIntersector(erVolume))/sim.space().boundaryBoxDiameter(sim.space().volumeBounds(erVolume))
         return (0.01>cost), cost
 

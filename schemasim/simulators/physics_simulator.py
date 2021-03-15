@@ -93,7 +93,7 @@ class PhysicsSimulator(simulator.Simulator):
         return True
     def isExplicatableSchema(self, schema):
         # the following schemas do not require further theory to elucidate, as far as a physics simulator is concerned:
-        if schema._type in ["Object", "ParticleSystem", "Var", "SurfaceNormal", "WorldVerticalDirection", "WorldRelativeTopSurface", "WorldRelativeBottomSurface", "ObjectRelativeTopSurface", "ObjectRelativeBottomSurface", "UprightDirection", "Centroid", "Interior", "CollisionEnabled", "CollisionDisabled", "SurfaceContainment", "PointInVolume", "AxisAlignment", "AxisCounterAlignment", "AxisOrthogonality", "RelativeDepart", "RelativeStay", "RelativeStayLevel", "RelativeFall", "RelativeApproach", "Expectation", "PathAbsence", "PathExistence"]:
+        if schema._type in ["Object", "ParticleSystem", "Var", "ConventionalPrimitive", "ForwardDirection", "PointProximity", "PointDistance", "AxisPointingTo", "AxisPointingAwayFrom", "SurfaceNormal", "WorldVerticalDirection", "WorldRelativeTopSurface", "WorldRelativeBottomSurface", "ObjectRelativeTopSurface", "ObjectRelativeBottomSurface", "UprightDirection", "Centroid", "Interior", "CollisionEnabled", "CollisionDisabled", "SurfaceContainment", "PointInVolume", "AxisAlignment", "AxisCounterAlignment", "AxisOrthogonality", "RelativeDepart", "RelativeStay", "RelativeStayLevel", "RelativeFall", "RelativeApproach", "Expectation", "PathAbsence", "PathExistence"]:
             return True
         return False
 

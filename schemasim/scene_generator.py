@@ -251,6 +251,8 @@ def explicateSchemas(schemas, simulator):
             obj = explicitSchemaNet.schemas()[k]
             if "ParameterizedSchema" in obj._meta_type:
                 k = k + 1
+                if simulator.isExplicitObject(obj):
+                    continue
                 constraintSchemas = []
                 while (k < len(explicitSchemaNet.schemas())) and ("ParameterizedSchema" not in explicitSchemaNet.schemas()[k]._meta_type):
                     if simulator.isExplicatableSchema(explicitSchemaNet.schemas()[k]):

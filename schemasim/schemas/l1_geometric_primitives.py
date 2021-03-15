@@ -59,6 +59,20 @@ class GeometricPrimitive(st.RoleDefiningSchema):
             else:
                 point = list(mesh.centroid)
         return point
+    def getPrimitive(self, sim):
+        return None
+
+class ConventionalPrimitive(GeometricPrimitive):
+    def __init__(self, semantic_key, obj=None):
+        super().__init__()
+        self._type = "ConventionalPrimitive"
+        self._meta_type.append("ConventionalPrimitive")
+        self._roles = {"obj": obj}
+        self._semantic_key = semantic_key
+    def _semanticEntry(self, sim):
+        return self._semantic_key
+    def getPrimitive(self, sim):
+        return self._querySemanticEntry(self._semanticEntry(sim), None, sim)
 
 class PointPrimitive(GeometricPrimitive):
     def __init__(self):
@@ -66,6 +80,8 @@ class PointPrimitive(GeometricPrimitive):
         self._type = "PointPrimitive"
         self._meta_type.append("PointPrimitive")
         self._roles = {}
+    def getPrimitive(self, sim):
+        return self.getPoint(sim)
 
 class AxisPrimitive(GeometricPrimitive):
     def __init__(self):
@@ -77,6 +93,8 @@ class AxisPrimitive(GeometricPrimitive):
         return sim.space().verticalAxis()
     def getAxisAtFrame(self, frameData, sim):
         return sim.space().verticalAxis()
+    def getPrimitive(self, sim):
+        return self.getAxis(sim)
 
 class WorldRelativeAxisPrimitive(AxisPrimitive):
     def __init__(self):
@@ -121,6 +139,8 @@ class SurfacePrimitive(GeometricPrimitive):
         return sim.space().pointCloudBounds(self.getSurface(sim)), sim.space().origin(), sim.space().identityRotation()
     def getSurfaceAtFrame(self, frameData, simulator):
         return self.getSurface(simulator)
+    def getPrimitive(self, sim):
+        return self.getSurface(sim)
 
 class WorldRelativeSurfacePrimitive(SurfacePrimitive):
     def __init__(self, obj=None):
@@ -219,7 +239,24 @@ class UprightDirection(ObjectRelativeAxisPrimitive):
     def _semanticEntry(self, sim):
         return "upright_direction"
     def getAxis(self, sim):
-        return self._querySemanticEntry(self._semanticEntry(sim), sim.space().verticalAxis(), sim)
+        axis = self._querySemanticEntry(self._semanticEntry(sim), sim.space().verticalAxis(), sim)
+        if sim.isExplicitSchema(self._roles["obj"]):
+            axis = sim.space().transformVector(axis, sim.space().nullVector(), sim.rotationRepresentation(self._roles["obj"]))
+        return axis
+
+class ForwardDirection(ObjectRelativeAxisPrimitive):
+    def __init__(self, obj=None):
+        super().__init__()
+        self._type = "ForwardDirection"
+        self._meta_type.append("ForwardDirection")
+        self._roles = {"obj": obj}
+    def _semanticEntry(self, sim):
+        return "forward_direction"
+    def getAxis(self, sim):
+        axis = self._querySemanticEntry(self._semanticEntry(sim), None, sim)
+        if axis and sim.isExplicitSchema(self._roles["obj"]):
+            axis = sim.space().transformVector(axis, sim.space().nullVector(), sim.rotationRepresentation(self._roles["obj"]))
+        return axis
 
 class SurfaceNormal(ObjectRelativeAxisPrimitive):
     def __init__(self, surface=None):
@@ -228,7 +265,10 @@ class SurfaceNormal(ObjectRelativeAxisPrimitive):
         self._meta_type.append("SurfaceNormal")
         self._roles = {"surface": surface}
     def getAxis(self, sim):
-        return self._roles["surface"].getNormal(sim)
+        axis = self._roles["surface"].getNormal(sim)
+        if sim.isExplicitSchema(self._roles["surface"]):
+            axis = sim.space().transformVector(axis, sim.space().nullVector(), sim.rotationRepresentation(self._roles["surface"]._roles["obj"]))
+        return axis
 
 class Centroid(PointPrimitive):
     def __init__(self, obj=None):
@@ -265,4 +305,6 @@ class Interior(GeometricPrimitive):
         t = sim.translationVector(objectFrame)
         r = sim.rotationRepresentation(objectFrame)
         return sim.space().transformVolume(volume, t, r)
+    def getPrimitive(self, sim):
+        return self.getVolume(sim)
 

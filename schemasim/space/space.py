@@ -6,6 +6,7 @@ import numpy as np
 from numpy.linalg import svd
 
 import itertools
+import random
 
 import heapq
 
@@ -84,7 +85,7 @@ class TimedPointGraph:
                 self._points[p] = t
                 for idx, stepTime in self._pointGraph.outgoingNeighbors(p).items():
                     heapq.heappush(toVisit, (t+stepTime, idx))
-    def generatePath(self, pointId):
+    def _generatePath(self, pointId):
         if (pointId not in self._points) or (None == self._points[pointId]):
             return None
         retq = [pointId]
@@ -103,6 +104,26 @@ class TimedPointGraph:
                 retq.append(crId)
         retq.reverse()
         return retq
+    def generatePath(self, point, inGraph=False):
+        if inGraph:
+            return self._generatePath(point)
+        pId = None
+        pT = None
+        for p, t in self._pointGraph.graphEgressPoints(point).items():
+            if (None == t) or (None == self.pointTime(p)):
+                continue
+            if None == pT:
+                pT = t + self.pointTime(p)
+                pId = p
+            else:
+                t = t + self.pointTime(p)
+                if pT > t:
+                    pT = t
+                    pId = p
+        waypoints = []
+        if None != pId:
+            waypoints = self._generatePath(pId)
+        return waypoints
 
 class Space:
     def __init__(self, particleSamplingResolution=0.04, translationSamplingResolution=0.1, rotationSamplingResolution=0.1, speedSamplingResolution=0.1, sampleValidationStrictness=0.005, collisionPadding=0.005):
@@ -186,6 +207,10 @@ class Space:
         for (x, y) in zip(va, vb):
             retq = retq + x*y
         return retq
+    def invertTransform(self, transform):
+        return None
+    def transformTransform(self, transformA, transformB):
+        return None
     def transformVector(self, vector, translation, orientation):
         return None
     def translateVector(self, vector, translation):

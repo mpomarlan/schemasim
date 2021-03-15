@@ -57,4 +57,13 @@ def uniformBoxRPD(dims, translation=[0,0,0], rotation=[0,0,0,1], resolution=0.1)
             for z in zs:
                 pd.append([1.0, transformVector([x, y, z], translation, rotation)])
     return pd
- 
+
+def uniformBox2DRPD(dims, translation=[0,0], rotation=[0], resolution=0.1):
+    pd = []
+    xs = list(np.arange(dims[0][0], dims[0][1]*1.01, resolution))
+    ys = list(np.arange(dims[1][0], dims[1][1]*1.01, resolution))
+    for x in xs:
+        for y in ys:
+            pd.append([1.0, transform2DVector([x, y], translation, rotation)])
+    return pd
+

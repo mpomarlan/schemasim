@@ -30,17 +30,34 @@ def distanceFromPoint(a, b):
     ds = dx*dx + dy*dy + dz*dz
     return math.sqrt(ds)
 
-def sameCell(a, b):
-    return (distanceFromPoint(a, b) < 0.05)
+def distanceFromPoint2D(a, b):
+    dx = a[0] - b[0]
+    dy = a[1] - b[1]
+    ds = dx*dx + dy*dy
+    return math.sqrt(ds)
 
-def overlappingCells(a, b):
-    xOverlap = (a[0] <= b[0] + 0.3) and (b[0] - 0.3 <= a[0])
-    yOverlap = (a[1] <= b[1] + 0.3) and (b[1] - 0.3 <= a[1])
-    zOverlap = (a[2] <= b[2] + 0.3) and (b[2] - 0.3 <= a[2])
+def sameCell(a, b, resolution=0.05):
+    return (distanceFromPoint(a, b) < resolution)
+
+def overlappingCells(a, b,resolution=0.3):
+    xOverlap = (a[0] <= b[0] + resolution) and (b[0] - resolution <= a[0])
+    yOverlap = (a[1] <= b[1] + resolution) and (b[1] - resolution <= a[1])
+    zOverlap = (a[2] <= b[2] + resolution) and (b[2] - resolution <= a[2])
     return xOverlap and yOverlap and zOverlap
+
+def sameCell2D(a, b, resolution=0.05):
+    return (distanceFromPoint2D(a, b) < resolution)
+
+def overlappingCells2D(a, b,resolution=0.3):
+    xOverlap = (a[0] <= b[0] + resolution) and (b[0] - resolution <= a[0])
+    yOverlap = (a[1] <= b[1] + resolution) and (b[1] - resolution <= a[1])
+    return xOverlap and yOverlap
 
 def scaleMatrix(scale):
     return [[scale[0], 0, 0, 0], [0, scale[1], 0, 0], [0, 0, scale[2], 0], [0, 0, 0, 1]]
+
+def scaleMatrix2D(scale):
+    return [[scale[0], 0, 0], [0, scale[1], 0], [0, 0, 1]]
 
 def flipMatrix(flip):
     fx = 1
@@ -54,9 +71,18 @@ def flipMatrix(flip):
         fz = -1
     return [[fx, 0, 0, 0], [0, fy, 0, 0], [0, 0, fz, 0], [0, 0, 0, 1]]
 
+def flipMatrix2D(flip):
+    fx = 1
+    fy = 1
+    if (0 in flip) or ('x' in flip) or ('X' in flip):
+        fx = -1
+    if (1 in flip) or ('y' in flip) or ('Y' in flip):
+        fy = -1
+    return [[fx, 0, 0], [0, fy, 0], [0, 0, 1]]
+
 def poseFrom2DTQ(t, q):
-    c = math.cos(q)
-    s = math.sin(q)
+    c = math.cos(q[0])
+    s = math.sin(q[0])
     pose = [[c,-s,t[0]],[s,c,t[1]],[0,0,1]]
     pose = np.array(pose)
     return pose
@@ -92,6 +118,7 @@ def poseFromTQ(t, q):
     return pose
 
 def transformVector(v, t, q):
+    v = list(v)
     pose = poseFromTQ(t, q)
     rv = [0,0,0,0]
     nv = v + [1.0]
@@ -101,6 +128,7 @@ def transformVector(v, t, q):
     return rv[:3]
 
 def transform2DVector(v, t, q):
+    v = list(v)
     pose = poseFrom2DTQ(t, q)
     rv = [0,0,0]
     nv = v + [1.0]
@@ -157,22 +185,41 @@ def volumeInclusion(movingVolume, targetVolume):
         return False
     return True
 
-def outerAreaFromSurface(movingSurface, targetSurface):
+def outerAreaFromSurface(movingSurface, targetSurface, resolution=0.05, samplingResolution=0.3):
     nonOverlapping = 0
     for a in movingSurface:
         overlaps = 0
         for b in targetSurface:
-            if sameCell(a, b):
+            if sameCell(a, b, resolution):
                overlaps = 4
                break
-            if overlappingCells(a, b):
+            if overlappingCells(a, b, samplingResolution):
                overlaps = overlaps + 1
         if overlaps < 4:
             nonOverlapping = nonOverlapping + 1
     if 0 == nonOverlapping:
         return 0.0
     normedArea = ((1.0*nonOverlapping)/len(movingSurface))
-    if distanceFromPoint(centroid(movingSurface), centroid(targetSurface)) <= 0.2:
+    if distanceFromPoint(centroid(movingSurface), centroid(targetSurface)) <= samplingResolution:
+        normedArea = normedArea*0.01
+    return normedArea*0.5
+
+def outerAreaFromSurface2D(movingSurface, targetSurface, resolution=0.05, samplingResolution=0.3):
+    nonOverlapping = 0
+    for a in movingSurface:
+        overlaps = 0
+        for b in targetSurface:
+            if sameCell2D(a, b, resolution):
+               overlaps = 2
+               break
+            if overlappingCells2D(a, b, samplingResolution):
+               overlaps = overlaps + 1
+        if overlaps < 2:
+            nonOverlapping = nonOverlapping + 1
+    if 0 == nonOverlapping:
+        return 0.0
+    normedArea = ((1.0*nonOverlapping)/len(movingSurface))
+    if distanceFromPoint(centroid(movingSurface), centroid(targetSurface)) <= samplingResolution:
         normedArea = normedArea*0.01
     return normedArea*0.5
 

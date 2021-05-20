@@ -8,8 +8,6 @@ import trimesh
 
 import schemasim.space.space as space
 
-from schemasim.util.geometry import volumeInclusion
-
 from schemasim.util.geometry import centroid, poseFromTQ, scaleMatrix, flipMatrix, transformVector, fibonacci_sphere, outerAreaFromSurface
 from schemasim.util.probability_density import normalizePD, samplePD, uniformQuaternionRPD, uniformBoxRPD
 
@@ -182,7 +180,9 @@ class Space3D(space.Space):
     def poseFromTR(self, translation, rotation):
         return poseFromTQ(translation, rotation)
     def volumeInclusion(self, volumeA, volumeB):
-        return volumeInclusion(volumeA, volumeB)
+        d = self.distanceFromInterior(volumeA.vertices, volumeB)
+        nF = 0.5*(self.boundaryBoxDiameter(self.volumeBounds(volumeA)) + self.boundaryBoxDiameter(self.volumeBounds(volumeB)))
+        return (0.1 > (d/nF))
     def distanceFromInterior(self, points, volume):
         if not volume.is_watertight:
             return self.boundaryBoxDiameter(self.volumeBounds(volume))

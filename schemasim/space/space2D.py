@@ -8,8 +8,6 @@ import trimesh
 
 import schemasim.space.space as space
 
-from schemasim.util.geometry import volumeInclusion
-
 from schemasim.util.geometry import centroid, poseFrom2DTQ, scaleMatrix2D, flipMatrix2D, transform2DVector, outerAreaFromSurface2D, angleDiff
 from schemasim.util.probability_density import normalizePD, samplePD, uniformBox2DRPD
 
@@ -262,7 +260,7 @@ class Space2D(space.Space):
         return poseFromTQ(translation, rotation)
     def volumeInclusion(self, volumeA, volumeB):
         # TODO
-        return volumeInclusion(volumeA, volumeB)
+        return True
     def distanceFromInterior(self, points, volume):
         # TODO
         return 0.0

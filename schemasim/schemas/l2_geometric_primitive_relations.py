@@ -314,7 +314,7 @@ class PointInVolume(GeometricPrimitiveRelation):
         erVolume = self._roles["container_volume"].getVolumeAtFrame([{}, frameData], 1, sim)
         eePoint = self._roles["containee_point"].getPoint(sim, frameData=frameData)
         cost = 2.0*sim.space().distanceFromInterior([eePoint], erVolume)/sim.space().boundaryBoxDiameter(sim.space().volumeBounds(erVolume))
-        return (0.1>cost), cost
+        return (0.2>cost), cost
 
 class VolumeInVolume(GeometricPrimitiveRelation):
     def __init__(self, container_volume=None, containee_point=None):
@@ -371,5 +371,5 @@ class VolumeInVolume(GeometricPrimitiveRelation):
         eeVolume = self._roles["containee"].getVolumeAtFrame([{}, frameData], 1, sim)
         nF = 0.5*(sim.space().boundaryBoxDiameter(sim.space().volumeBounds(erVolume)) + sim.space().boundaryBoxDiameter(sim.space().volumeBounds(eeVolume)))
         cost = sim.space().distanceFromInterior(eeVolume.vertices, erVolume)/nF
-        return (0.1 > cost), cost
+        return (0.2 > cost), cost
 

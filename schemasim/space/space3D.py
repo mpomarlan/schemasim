@@ -119,7 +119,10 @@ class Space3D(space.Space):
         if not path:
             return None
         mesh = trimesh.load(path)
-        mesh.process(validate=True)
+        mesh.process()
+        mesh.remove_duplicate_faces()
+        mesh.remove_degenerate_faces()
+        mesh.fix_normals()
         if adjustments:
             if (("translation" in adjustments) and (None!=adjustments["translation"])) or (("rotation" in adjustments) and (None!=adjustments["rotation"])):
                 translation = self.nullVector()
@@ -182,11 +185,11 @@ class Space3D(space.Space):
     def volumeInclusion(self, volumeA, volumeB):
         d = self.distanceFromInterior(volumeA.vertices, volumeB)
         nF = 0.5*(self.boundaryBoxDiameter(self.volumeBounds(volumeA)) + self.boundaryBoxDiameter(self.volumeBounds(volumeB)))
-        return (0.1 > (d/nF))
+        return (0.2 > (d/nF))
     def distanceFromInterior(self, points, volume):
         if not volume.is_watertight:
             return self.boundaryBoxDiameter(self.volumeBounds(volume))
-        if not points:
+        if 0 == len(points):
             return 0.0
         contains = volume.contains(points)
         dists = []

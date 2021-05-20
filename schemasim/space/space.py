@@ -223,7 +223,7 @@ class Space:
         return None
     def volumeInclusion(self, volumeA, volumeB):
         return None
-    def distanceFromInterior(self, point, volume, volumeRayIntersector):
+    def distanceFromInterior(self, points, volume):
         return None
     def outerAreaFromSurface(self, sa, sb):
         return None

@@ -10,7 +10,7 @@ import schemasim.space.space as space
 
 from schemasim.util.geometry import volumeInclusion
 
-from schemasim.util.geometry import centroid, poseFromTQ, scaleMatrix, flipMatrix, transformVector, fibonacci_sphere, distanceFromInterior, outerAreaFromSurface
+from schemasim.util.geometry import centroid, poseFromTQ, scaleMatrix, flipMatrix, transformVector, fibonacci_sphere, outerAreaFromSurface
 from schemasim.util.probability_density import normalizePD, samplePD, uniformQuaternionRPD, uniformBoxRPD
 
 class DummyCollisionManager():
@@ -121,6 +121,7 @@ class Space3D(space.Space):
         if not path:
             return None
         mesh = trimesh.load(path)
+        mesh.process(validate=True)
         if adjustments:
             if (("translation" in adjustments) and (None!=adjustments["translation"])) or (("rotation" in adjustments) and (None!=adjustments["rotation"])):
                 translation = self.nullVector()
@@ -182,8 +183,20 @@ class Space3D(space.Space):
         return poseFromTQ(translation, rotation)
     def volumeInclusion(self, volumeA, volumeB):
         return volumeInclusion(volumeA, volumeB)
-    def distanceFromInterior(self, point, volume, volumeRayIntersector):
-        return 2.0*distanceFromInterior(point, volume, volumeRayIntersector)/self.boundaryBoxDiameter(self.volumeBounds(volume))
+    def distanceFromInterior(self, points, volume):
+        if not volume.is_watertight:
+            return self.boundaryBoxDiameter(self.volumeBounds(volume))
+        if not points:
+            return 0.0
+        contains = volume.contains(points)
+        dists = []
+        for c, p in zip(contains, points):
+            if c:
+                dists.append(0.0)
+            else:
+                closest, distance, triangle_id = trimesh.proximity.closest_point(volume, [p])
+                dists.append(distance)
+        return sum(dists)/len(dists)
     def outerAreaFromSurface(self, sa, sb):
         return outerAreaFromSurface(sa, sb, self._translationSamplingResolution*0.1, 2*self._translationSamplingResolution)
     def cubeExtents(self, halfSide):

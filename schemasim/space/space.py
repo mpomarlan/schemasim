@@ -156,7 +156,7 @@ class Space:
         return None
     def volumePathModifier(self):
         return None
-    def volumeInteriorPathModifier(self):
+    def volumePartPathModifier(self, part):
         return None
     def dof(self):
         return None

@@ -277,26 +277,26 @@ class Centroid(PointPrimitive):
         self._meta_type.append("Centroid")
         self._roles = {"obj": obj}
 
-class Interior(GeometricPrimitive):
+class VolumePrimitive(GeometricPrimitive):
     def __init__(self, obj=None):
         super().__init__()
-        self._type = "Interior"
-        self._meta_type.append("Interior")
-        self._roles = {"obj": obj}
+        self._type = "VolumePrimitive"
+        self._meta_type.append("VolumePrimitive")
+        self._roles = {"obj": obj, "volume": ""}
     def _getMeshPathModifier(self, sim):
-        return sim.space().volumeInteriorPathModifier()
+        return sim.space().volumePartPathModifier(self._roles["volume"])
     def getVolumeBounds(self, sim):
-        interior = self._getVolumeInternal(sim)
-        if not interior:
+        volume = self._getVolumeInternal(sim)
+        if not volume:
             return None, None, None
         t, r = self._getTransformInternal(sim)
-        return sim.space().volumeBounds(interior), t, r
+        return sim.space().volumeBounds(volume), t, r
     def getVolume(self, sim):
-        interior = self._getVolumeInternal(sim)
-        if not interior:
+        volume = self._getVolumeInternal(sim)
+        if not volume:
             return None
         t, r = self._getTransformInternal(sim)
-        return sim.space().transformVolume(interior, t, r)
+        return sim.space().transformVolume(volume, t, r)
     def getVolumeAtFrame(self, frameData, frame, sim):
         if 0 == frame:
             return self.getVolume(sim)
@@ -307,4 +307,18 @@ class Interior(GeometricPrimitive):
         return sim.space().transformVolume(volume, t, r)
     def getPrimitive(self, sim):
         return self.getVolume(sim)
+
+class Interior(VolumePrimitive):
+    def __init__(self, obj=None):
+        super().__init__()
+        self._type = "Interior"
+        self._meta_type.append("Interior")
+        self._roles = {"obj": obj, "volume": "interior"}
+
+class FunctionalPart(VolumePrimitive):
+    def __init__(self, obj=None, part=None):
+        super().__init__()
+        self._type = "FunctionalPart"
+        self._meta_type.append("FunctionalPart")
+        self._roles = {"obj": obj, "volume": part}
 

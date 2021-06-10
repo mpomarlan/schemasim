@@ -208,9 +208,11 @@ class Space2D(space.Space):
     def volumePathModifier(self):
         # TODO: establish a data structure to hold 2D data
         return ".2d"
-    def volumeInteriorPathModifier(self):
+    def volumePartPathModifier(self, part):
+        if not part:
+            part = ""
         # TODO: establish a data structure to hold 2D data
-        return "_interior.2d"
+        return ("_%s.2d" % part)
     def dof(self):
         return 2
     def axes(self):

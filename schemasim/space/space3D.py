@@ -140,8 +140,10 @@ class Space3D(space.Space):
         return ".sem3D"
     def volumePathModifier(self):
         return ".stl"
-    def volumeInteriorPathModifier(self):
-        return "_interior.stl"
+    def volumePartPathModifier(self, part):
+        if not part:
+            part = ""
+        return ("_%s.stl" % part)
     def dof(self):
         return 3
     def axes(self):

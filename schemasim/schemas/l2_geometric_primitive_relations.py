@@ -24,6 +24,18 @@ class ContactDependentRelation(GeometricPrimitiveRelation):
         self._type = "ContactDependentRelation"
         self._meta_type.append("ContactDependentRelation")
         self._roles = {"trajector": trajector, "landmark": landmark}
+    def getMovingVolume(self, sim):
+        if not sim.isExplicitSchema(self._roles["trajector"]):
+            return self._roles["trajector"].getVolume(sim)
+        elif not sim.isExplicitSchema(self._roles["landmark"]):
+            return self._roles["landmark"].getVolume(sim)
+        return None
+    def getTargetVolume(self, sim):
+        if sim.isExplicitSchema(self._roles["trajector"]):
+            return self._roles["trajector"].getVolume(sim)
+        elif sim.isExplicitSchema(self._roles["landmark"]):
+            return self._roles["landmark"].getVolume(sim)
+        return None
     def _evaluateSignedDistance(self, d, refD):
         return True, 1.0
     def evaluateFrame(self, frameData, sim):
@@ -33,6 +45,17 @@ class ContactDependentRelation(GeometricPrimitiveRelation):
         refD = 0.1*sim.space().boundaryBoxDiameter(sim.space().volumeBounds(self._roles["trajector"]))
         return self._evaluateSignedDistance(d, refD)
     def filterPD(self, rpd, sim, strictness=0.005):
+        refD = 0.1*sim.space().boundaryBoxDiameter(sim.space().volumeBounds(self._roles["trajector"]))
+        moving = self.getMovingVolume(sim)
+        target = self.getTargetVolume(sim)
+        space = sim.space()
+        last = space.origin()
+        for c in rpd:
+            current = space.vectorDifference(c[1], last)
+            moving = space.translateVolume(moving, current)
+            d = sim.space().distanceBetweenObjects(moving, target)
+            c[0] = c[0]*self._evaluateSignedDistance(d, refD)[1]
+            last = c[1]
         return rpd
 
 class Contact(ContactDependentRelation):

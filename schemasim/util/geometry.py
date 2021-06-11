@@ -159,32 +159,6 @@ def fibonacci_sphere(samples=1, only_positive_quadrant=True):
             points.append([x,y,z])
     return points
 
-def distanceFromInterior(point, volume, volumeRayIntersector):
-    triangs, rays = volumeRayIntersector.intersects_id([point], [[0,0,1]], multiple_hits=True)
-    if 1 == len(triangs) % 2:
-        # point is inside
-        return 0
-    closest, distance, triangle_id = trimesh.proximity.closest_point(volume, [point])
-    return distance[0]
-
-def volumeInclusion(movingVolume, targetVolume):
-    targetVolumeIntersector = trimesh.ray.ray_triangle.RayMeshIntersector(targetVolume)
-    rayDirs = []
-    intersections = []
-    for p in movingVolume.vertices:
-        rayDirs.append([0.0,0.0,1.0])
-        intersections.append(0)
-    triangs, rays = targetVolumeIntersector.intersects_id(list(movingVolume.vertices), rayDirs, multiple_hits=True)
-    for r in rays:
-        intersections[r] = intersections[r] + 1
-    nonIns = 0
-    for i in intersections:
-        if 0 == (i%2):
-            nonIns = nonIns + 1
-    if len(movingVolume.vertices) < nonIns*6:
-        return False
-    return True
-
 def outerAreaFromSurface(movingSurface, targetSurface, resolution=0.05, samplingResolution=0.3):
     nonOverlapping = 0
     for a in movingSurface:

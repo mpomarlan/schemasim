@@ -359,17 +359,15 @@ class PointInVolume(GeometricPrimitiveRelation):
             point = targetPoint
         elif (targetVolume and movingPoint):
             volume = targetVolume
-            volumeRayIntersector = sim.space().makeRayVolumeIntersector(targetVolume)
             point = space.transformVector(movingPoint, space.nullVector(), orientation)
         last = space.origin()
         for c in rpd:
             current = space.vectorDifference(c[1], last)
             if pt:
                 volume = space.translateVolume(volume, current)
-                volumeRayIntersector = sim.space().makeRayVolumeIntersector(volume)
             else:
                 point = space.translateVector(point, current)
-            cost = space.distanceFromInterior(point, volume, volumeRayIntersector)
+            cost = 2.0*space.distanceFromInterior([point], volume)/sim.space().boundaryBoxDiameter(sim.space().volumeBounds(volume))
             c[0] = c[0]/math.exp(cost/strictness)
             centroid = list(volume.centroid)
             d = 2.0*space.vectorNorm(space.vectorDifference(point, centroid))/space.boundaryBoxDiameter(space.volumeBounds(volume))
@@ -379,6 +377,63 @@ class PointInVolume(GeometricPrimitiveRelation):
     def evaluateFrame(self, frameData, sim):
         erVolume = self._roles["container_volume"].getVolumeAtFrame([{}, frameData], 1, sim)
         eePoint = self._roles["containee_point"].getPoint(sim, frameData=frameData)
-        cost = sim.space().distanceFromInterior(eePoint, erVolume, sim.space().makeRayVolumeIntersector(erVolume))/sim.space().boundaryBoxDiameter(sim.space().volumeBounds(erVolume))
-        return (0.01>cost), cost
+        cost = 2.0*sim.space().distanceFromInterior([eePoint], erVolume)/sim.space().boundaryBoxDiameter(sim.space().volumeBounds(erVolume))
+        return (0.2>cost), cost
+
+class VolumeInVolume(GeometricPrimitiveRelation):
+    def __init__(self, container_volume=None, containee_point=None):
+        super().__init__()
+        self._type = "VolumeInVolume"
+        self._meta_type.append("VolumeInVolume")
+        self._roles = {"container": container_volume, "containee": containee_point}
+    def getMovingVolume(self, sim):
+        if not sim.isExplicitSchema(self._roles["containee"]):
+            return self._roles["containee"].getVolume(sim)
+        elif not sim.isExplicitSchema(self._roles["container"]):
+            return self._roles["container"].getVolume(sim)
+        return None
+    def getTargetVolume(self, sim):
+        if sim.isExplicitSchema(self._roles["container"]):
+            return self._roles["container"].getVolume(sim)
+        elif sim.isExplicitSchema(self._roles["containee"]):
+            return self._roles["containee"].getVolume(sim)
+        return None
+    def getMovingVolumeBounds(self, sim):
+        if not sim.isExplicitSchema(self._roles["containee"]):
+            return self._roles["containee"].getVolumeBounds(sim)
+        elif not sim.isExplicitSchema(self._roles["container"]):
+            return self._roles["container"].getVolumeBounds(sim)
+        return None, None, None
+    def getTargetVolumeBounds(self, sim):
+        if sim.isExplicitSchema(self._roles["container"]):
+            return self._roles["container"].getVolumeBounds(sim)
+        elif sim.isExplicitSchema(self._roles["containee"]):
+            return self._roles["containee"].getVolumeBounds(sim)
+        return None, None, None
+    def filterPD(self, rpd, orientation, sim, strictness=0.005):
+        space = sim.space()
+        targetVolume = self.getTargetVolume(sim)
+        movingVolume = self.getMovingVolume(sim)
+        if (not movingVolume) and (not targetVolume):
+            return None
+        movingVolume = space.transformVolume(movingVolume, space.nullVector(), orientation)
+        nF = 0.5*(sim.space().boundaryBoxDiameter(sim.space().volumeBounds(targetVolume)) + sim.space().boundaryBoxDiameter(sim.space().volumeBounds(movingVolume)))
+        last = space.origin()
+        for c in rpd:
+            current = space.vectorDifference(c[1], last)
+            movingVolume = space.translateVolume(movingVolume, current)
+            cost = space.distanceFromInterior([point], volume)/nF
+            c[0] = c[0]/math.exp(cost/strictness)
+            tCentroid = list(targetVolume.centroid)
+            mCentroid = list(movingVolume.centroid)
+            d = 2.0*space.vectorNorm(space.vectorDifference(tCentroid, mCentroid))/space.boundaryBoxDiameter(space.volumeBounds(volume))
+            c[0] = 2.0*c[0]/(1.0 + math.pow(1.0 + d, 6*space.dof()))
+            last = c[1]
+        return rpd
+    def evaluateFrame(self, frameData, sim):
+        erVolume = self._roles["container"].getVolumeAtFrame([{}, frameData], 1, sim)
+        eeVolume = self._roles["containee"].getVolumeAtFrame([{}, frameData], 1, sim)
+        nF = 0.5*(sim.space().boundaryBoxDiameter(sim.space().volumeBounds(erVolume)) + sim.space().boundaryBoxDiameter(sim.space().volumeBounds(eeVolume)))
+        cost = sim.space().distanceFromInterior(eeVolume.vertices, erVolume)/nF
+        return (0.2 > cost), cost
 

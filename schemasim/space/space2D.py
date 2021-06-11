@@ -8,9 +8,7 @@ import trimesh
 
 import schemasim.space.space as space
 
-from schemasim.util.geometry import volumeInclusion
-
-from schemasim.util.geometry import centroid, poseFrom2DTQ, scaleMatrix2D, flipMatrix2D, transform2DVector, distanceFromInterior, outerAreaFromSurface2D, angleDiff
+from schemasim.util.geometry import centroid, poseFrom2DTQ, scaleMatrix2D, flipMatrix2D, transform2DVector, outerAreaFromSurface2D, angleDiff
 from schemasim.util.probability_density import normalizePD, samplePD, uniformBox2DRPD
 
 # A grid of points in 2D space with orientations. The orientation of a point can take one of eight values.
@@ -264,10 +262,10 @@ class Space2D(space.Space):
         return poseFromTQ(translation, rotation)
     def volumeInclusion(self, volumeA, volumeB):
         # TODO
-        return volumeInclusion(volumeA, volumeB)
-    def distanceFromInterior(self, point, volume, volumeRayIntersector):
+        return True
+    def distanceFromInterior(self, points, volume):
         # TODO
-        return 2.0*distanceFromInterior(point, volume, volumeRayIntersector)/self.boundaryBoxDiameter(self.volumeBounds(volume))
+        return None
     def distanceBetweenObjects(self, a, b):
         # TODO
         return None

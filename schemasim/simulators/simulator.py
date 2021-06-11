@@ -226,7 +226,7 @@ class Simulator:
         for s in constraintSchemas:
             if s._type in ["AxisAlignment", "AxisCounterAlignment", "AxisOrthogonality", "SurfaceContainment"]:
                 densityMapConstraints["rotation"].append(s)
-            if s._type in ["PointInVolume", "SurfaceContainment"]:
+            if s._type in ["PointInVolume", "SurfaceContainment", "PointCloseToLine", "PointFarFromLine", "PointProximity", "PointDistance", "VolumeAboveVolume", "VolumeBelowVolume", "Contact", "NoContact"]:
                 densityMapConstraints["translation"].append(s)
                 densityMapConstraints["particle_region_position"].append(s)
             if s._type in ["Heavy"]:

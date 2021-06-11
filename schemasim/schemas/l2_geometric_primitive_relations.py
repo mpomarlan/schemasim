@@ -55,11 +55,11 @@ class ContactDependentRelation(GeometricPrimitiveRelation):
         d = sim.space().distanceBetweenObjects(a, b)
         refD = 0.1*sim.space().boundaryBoxDiameter(sim.space().volumeBounds(self._roles["trajector"]))
         return self._evaluateSignedDistance(d, refD)
-    def filterPD(self, rpd, sim, strictness=0.005):
+    def filterPD(self, rpd, orientation, sim, strictness=0.005):
         refD = 0.1*sim.space().boundaryBoxDiameter(sim.space().volumeBounds(self._roles["trajector"]))
-        moving = self.getMovingVolume(sim)
-        target = self.getTargetVolume(sim)
         space = sim.space()
+        moving = space.transformVolume(self.getMovingVolume(sim), space.nullVector(), orientation)
+        target = self.getTargetVolume(sim)
         last = space.origin()
         for c in rpd:
             current = space.vectorDifference(c[1], last)
@@ -125,23 +125,28 @@ class PointLineRelation(GeometricPrimitiveRelation):
     def evaluateFrame(self, frameData, sim):
         point = self._roles["point"].getPoint(sim, frameData)
         line = self._roles["line"].getLineAtFrame(frameData, sim)
-        if (None == point) or (None == line):
+        if (not point) or (not line):
             return False, 0.0
         d = sim.space().distancePointLine(point, line)
         ref = self._getRef()
         return self._evaluateDistance(d, ref)
-    def filterPD(self, rpd, sim, strictness=0.005):
+    def filterPD(self, rpd, orientation, sim, strictness=0.005):
+        space = sim.space()
         ref = self._getRef()
         lineMoves = False
         point = self.getMovingPoint(sim)
         if not point:
             point = self.getTargetPoint(sim)
             line = self.getMovingLine(sim)
+            a = space.transformVector(line[0:3], space.nullVector(), orientation)
+            b = space.transformVector(line[3:6], space.nullVector(), orientation)
+            line = a+b
             lineMoves = True
         else:
             line = self.getTargetLine(sim)
-        if (None == line) or (None == point):
-            return rpd
+            point = space.transformVector(point, space.nullVector(), orientation)
+        if (not line) or (not point):
+            return None
         last = sim.space().origin()
         for c in rpd:
             tr = sim.space().vectorDifference(c[1], last)
@@ -203,14 +208,15 @@ class PointRelation(GeometricPrimitiveRelation):
         D = aD + bD
         score = self._scoreFn(d, D)
         return (self._scoreFn(0.1*D, D) < score), score
-    def filterPD(self, rpd, sim, strictness=0.005):
+    def filterPD(self, rpd, orientation, sim, strictness=0.005):
         space = sim.space()
         rPoint = self.getTargetPoint(sim)
+        mPoint = space.transformVector(self.getMovingPoint(sim), space.nullVector(), orientation)
         aD = space.boundaryBoxDiameter(space.volumeBounds(self._roles["a"].getVolume(sim)))
         bD = space.boundaryBoxDiameter(space.volumeBounds(self._roles["b"].getVolume(sim)))
         D = aD + bD
         for c in rpd:
-            d = space.vectorNorm(space.vectorDifference(c[1], rPoint))
+            d = space.vectorNorm(space.vectorDifference(space.vectorSum(c[1], mPoint), rPoint))
             c[0] = c[0]*self._scoreFn(d, D)
         return rpd
 
@@ -471,6 +477,89 @@ class PointInVolume(GeometricPrimitiveRelation):
         eePoint = self._roles["containee_point"].getPoint(sim, frameData=frameData)
         cost = 2.0*sim.space().distanceFromInterior([eePoint], erVolume)/sim.space().boundaryBoxDiameter(sim.space().volumeBounds(erVolume))
         return (0.2>cost), cost
+
+class VolumePrimitiveRelation(GeometricPrimitiveRelation):
+    def __init__(self, trajector=None, landmark=None):
+        super().__init__()
+        self._type = "VolumePrimitiveRelation"
+        self._meta_type.append("VolumePrimitiveRelation")
+        self._roles = {"trajector": trajector, "landmark": landmark}
+    def getMovingVolume(self, sim):
+        if not sim.isExplicitSchema(self._roles["trajector"]):
+            return self._roles["trajector"].getVolume(sim)
+        elif not sim.isExplicitSchema(self._roles["landmark"]):
+            return self._roles["landmark"].getVolume(sim)
+        return None
+    def getTargetVolume(self, sim):
+        if sim.isExplicitSchema(self._roles["landmark"]):
+            return self._roles["landmark"].getVolume(sim)
+        elif sim.isExplicitSchema(self._roles["trajector"]):
+            return self._roles["trajector"].getVolume(sim)
+        return None
+    def getMovingVolumeBounds(self, sim):
+        if not sim.isExplicitSchema(self._roles["trajector"]):
+            return self._roles["trajector"].getVolumeBounds(sim)
+        elif not sim.isExplicitSchema(self._roles["landmark"]):
+            return self._roles["landmark"].getVolumeBounds(sim)
+        return None, None, None
+    def getTargetVolumeBounds(self, sim):
+        if sim.isExplicitSchema(self._roles["landmark"]):
+            return self._roles["landmark"].getVolumeBounds(sim)
+        elif sim.isExplicitSchema(self._roles["trajector"]):
+            return self._roles["trajector"].getVolumeBounds(sim)
+        return None, None, None
+    def _evaluateVolumes(self, trajector, landmark, ref):
+        return True, 1.0
+    def evaluateFrame(self, frameData, sim):
+        trajector = self._roles["trajector"].getVolumeAtFrame([{}, frameData], 1, sim)
+        landmark = self._roles["landmark"].getVolumeAtFrame([{}, frameData], 1, sim)
+        return self._evaluateVolumes(trajector, landmark)
+    def filterPD(self, rpd, orientation, sim, strictness=0.005):
+        space = sim.space()
+        targetVolume = self.getTargetVolume(sim)
+        movingVolume = self.getMovingVolume(sim)
+        if (not movingVolume) or (not targetVolume):
+            return None
+        movingTrajector = True
+        if not sim.isExplicitSchema(self._roles["landmark"]):
+            movingTrajector = False
+        movingVolume = space.transformVolume(movingVolume, space.nullVector(), orientation)
+        ref = 0.5*(sim.space().boundaryBoxDiameter(sim.space().volumeBounds(targetVolume)) + sim.space().boundaryBoxDiameter(sim.space().volumeBounds(movingVolume)))
+        last = space.origin()
+        for c in rpd:
+            movingVolume = space.translateVolume(movingVolume, space.vectorDifference(c[1], last))
+            if movingTrajector:
+                c[0] = c[0]*self._evaluateVolumes(movingVolume, targetVolume, ref)
+            else:
+                c[0] = c[0]*self._evaluateVolumes(targetVolume, movingVolume, ref)
+            last = c[1]
+        return rpd
+
+class VolumeAboveVolume(VolumePrimitiveRelation):
+    def __init__(self, trajector=None, landmark=None):
+        super().__init__()
+        self._type = "VolumeAboveVolume"
+        self._meta_type.append("VolumeAboveVolume")
+        self._roles = {"trajector": trajector, "landmark": landmark}
+    def _evaluateVolumes(self, trajector, landmark, ref):
+        t = sim.space().volumeBounds(trajector)[2][0]
+        l = sim.space().volumeBounds(landmark)[2][1]
+        d = t - l
+        score = 1.0/(1.0 + math.exp(0.1*ref - d))
+        return (0.5 < score), score
+
+class VolumeBelowVolume(VolumePrimitiveRelation):
+    def __init__(self, trajector=None, landmark=None):
+        super().__init__()
+        self._type = "VolumeBelowVolume"
+        self._meta_type.append("VolumeBelowVolume")
+        self._roles = {"trajector": trajector, "landmark": landmark}
+    def _evaluateVolumes(self, trajector, landmark, ref):
+        t = sim.space().volumeBounds(trajector)[2][1]
+        l = sim.space().volumeBounds(landmark)[2][0]
+        d = l - t
+        score = 1.0/(1.0 + math.exp(0.1*ref - d))
+        return (0.5 < score), score
 
 class VolumeInVolume(GeometricPrimitiveRelation):
     def __init__(self, container_volume=None, containee_point=None):

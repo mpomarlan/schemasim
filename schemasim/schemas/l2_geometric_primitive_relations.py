@@ -17,6 +17,17 @@ class GeometricPrimitiveRelation(st.RoleDefiningSchema):
         return True, 1.0
     def filterPD(self, rpd, sim, strictness=0.005):
         return rpd
+    def evaluateTimeline(self, frameData, simulator, parameterizedSchemas={}, disabledObjects=[]):
+        reward = 0.0
+        for f in list(range(len(frameData))):
+            if not frameData[f]:
+                continue
+            reward = reward + self.evaluateFrame(frameData[f], simulator)
+        reward = reward/len(frameData)
+        judgement = True
+        if 0.9 > reward:
+            judgement = False
+        return judgement, reward
 
 class ContactDependentRelation(GeometricPrimitiveRelation):
     def __init__(self, trajector=None, landmark=None):

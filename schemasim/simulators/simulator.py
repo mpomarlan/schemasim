@@ -91,6 +91,11 @@ class Simulator:
     def _getMeshPD(self, constraints):
         return None
     def _getParticleNumPD(self, constraints):
+        if constraints:
+            rpd = [[1.0, x] for x in range(1,101)]
+            for c in constraints:
+                rpd = c.filterPD(rpd, self)
+            return rpd
         return [[1.0, 30]]
 
     def getPathEnvironmentVariable(self):
@@ -226,6 +231,8 @@ class Simulator:
                 densityMapConstraints["particle_region_position"].append(s)
             if s._type in ["Heavy"]:
                 densityMapConstraints["mass"].append(s)
+            if s._type in ["Plentiful", "Scarce"]:
+                densityMapConstraints["particle_num"].append(s)
         # Begin by selecting a mesh ...
         self._assignMesh(obj, densityMapConstraints["mesh"], self._getMeshPD(densityMapConstraints["mesh"]))
         # ... and a physics type

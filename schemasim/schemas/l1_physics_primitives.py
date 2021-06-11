@@ -80,8 +80,34 @@ class Heavy(MassSettingSchema):
         space = sim.space()
         ref = 10*self._normal
         for c in rpd:
-            movedAxis = space.transformVector(movingAxis, space.nullVector(), c[1])
-            angle = math.acos(space.vectorDotProduct(targetAxis, movedAxis))
             c[0] = c[0]*math.exp(-math.fabs(c[1] - ref)/(ref/5.0))
         return rpd
+
+class ParticleNumSettingSchema(PhysicsPrimitiveQuality):
+    def __init__(self, obj=None):
+        super().__init__(obj=obj, quality="particle_num")
+        self._type = "ParticleNumSettingSchema"
+        self._meta_type.append("ParticleNumSettingSchema")
+        self._normal = 30
+    def evaluateFrame(self, frameData, sim):
+        return True, 1.0
+    def filterPD(self, rpd, sim, strictness=0.005):
+        space = sim.space()
+        for c in rpd:
+            c[0] = c[0]*math.exp(-math.fabs(c[1] - self._normal)/(self._normal/5.0))
+        return rpd
+
+class Plentiful(ParticleNumSettingSchema):
+    def __init__(self, obj=None):
+        super().__init__(obj=obj)
+        self._type = "Plentiful"
+        self._meta_type.append("Plentiful")
+        self._normal = 50
+
+class Scarce(ParticleNumSettingSchema):
+    def __init__(self, obj=None):
+        super().__init__(obj=obj)
+        self._type = "Scarce"
+        self._meta_type.append("Scarce")
+        self._normal = 15
 

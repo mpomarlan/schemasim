@@ -224,6 +224,8 @@ class Simulator:
             if s._type in ["PointInVolume", "SurfaceContainment"]:
                 densityMapConstraints["translation"].append(s)
                 densityMapConstraints["particle_region_position"].append(s)
+            if s._type in ["Heavy"]:
+                densityMapConstraints["mass"].append(s)
         # Begin by selecting a mesh ...
         self._assignMesh(obj, densityMapConstraints["mesh"], self._getMeshPD(densityMapConstraints["mesh"]))
         # ... and a physics type

@@ -184,6 +184,10 @@ class Space3D(space.Space):
         return poseFromTQ(translation, rotation)
     def volumeInclusion(self, volumeA, volumeB):
         return volumeInclusion(volumeA, volumeB)
+    def distanceBetweenObjects(self, a, b):
+        ds = trimesh.proximity.signed_distance(a, b.vertices)
+        es = trimesh.proximity.signed_distance(b, a.vertices)
+        return -max(max(ds), max(es))
     def distanceFromInterior(self, point, volume, volumeRayIntersector):
         return 2.0*distanceFromInterior(point, volume, volumeRayIntersector)/self.boundaryBoxDiameter(self.volumeBounds(volume))
     def outerAreaFromSurface(self, sa, sb):

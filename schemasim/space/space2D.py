@@ -268,6 +268,9 @@ class Space2D(space.Space):
     def distanceFromInterior(self, point, volume, volumeRayIntersector):
         # TODO
         return 2.0*distanceFromInterior(point, volume, volumeRayIntersector)/self.boundaryBoxDiameter(self.volumeBounds(volume))
+    def distanceBetweenObjects(self, a, b):
+        # TODO
+        return None
     def outerAreaFromSurface(self, sa, sb):
         return outerAreaFromSurface2D(sa, sb, self._translationSamplingResolution*0.1, 2*self._translationSamplingResolution)
     def cubeExtents(self, halfSide):

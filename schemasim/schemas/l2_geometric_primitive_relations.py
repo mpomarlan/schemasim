@@ -18,6 +18,47 @@ class GeometricPrimitiveRelation(st.RoleDefiningSchema):
     def filterPD(self, rpd, sim, strictness=0.005):
         return rpd
 
+class ContactDependentRelation(GeometricPrimitiveRelation):
+    def __init__(self, trajector=None, landmark=None):
+        super().__init__()
+        self._type = "ContactDependentRelation"
+        self._meta_type.append("ContactDependentRelation")
+        self._roles = {"trajector": trajector, "landmark": landmark}
+    def _evaluateSignedDistance(self, d, refD):
+        return True, 1.0
+    def evaluateFrame(self, frameData, sim):
+        a = self._roles["trajector"].getVolumeAtFrame([{}, frameData], 1, sim)
+        b = self._roles["landmark"].getVolumeAtFrame([{}, frameData], 1, sim)
+        d = sim.space().distanceBetweenObjects(a, b)
+        refD = 0.1*sim.space().boundaryBoxDiameter(sim.space().volumeBounds(self._roles["trajector"]))
+        return self._evaluateSignedDistance(d, refD)
+    def filterPD(self, rpd, sim, strictness=0.005):
+        return rpd
+
+class Contact(ContactDependentRelation):
+    def __init__(self, trajector=None, landmark=None):
+        super().__init__(a=a, b=b)
+        self._type = "Contact"
+        self._meta_type.append("Contact")
+    def _evaluateSignedDistance(self, d, refD):
+        if 0.0001 > refD:
+            return False, 0.0
+        if 0.0 > d:
+            d = 0.0
+        return (d < refD), refD/(refD+d)
+
+class NoContact(ContactDependentRelation):
+    def __init__(self, trajector=None, landmark=None):
+        super().__init__(a=a, b=b)
+        self._type = "NoContact"
+        self._meta_type.append("NoContact")
+    def _evaluateSignedDistance(self, d, refD):
+        if 0.0001 > refD:
+            return True, 1.0
+        if 0.0 > d:
+            d = 0.0
+        return (d > refD), d/(refD+d)
+
 class PointRelation(GeometricPrimitiveRelation):
     def __init__(self, a=None, b=None):
         super().__init__()

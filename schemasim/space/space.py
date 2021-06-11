@@ -257,6 +257,8 @@ class Space:
         minP = [x[0] for x in bbox]
         maxP = [x[1] for x in bbox]
         return self.vectorNorm(self.vectorDifference(minP, maxP))
+    def distanceBetweenObjects(self, a, b):
+        return None
     def orthogonalBasis(self, vector):
         dots = [(math.fabs(self.vectorDotProduct(vector, x)), x) for x in self.axes()]
         axes = [x[1] for x in sorted(dots, key=lambda y: y[0])[:-1]]

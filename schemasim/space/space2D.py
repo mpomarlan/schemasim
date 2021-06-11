@@ -266,6 +266,9 @@ class Space2D(space.Space):
     def distanceFromInterior(self, points, volume):
         # TODO
         return None
+    def distancePointLine(self, point, line):
+        # TODO
+        return None
     def distanceBetweenObjects(self, a, b):
         # TODO
         return None

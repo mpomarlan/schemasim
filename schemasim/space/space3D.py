@@ -188,6 +188,13 @@ class Space3D(space.Space):
         ds = trimesh.proximity.signed_distance(a, b.vertices)
         es = trimesh.proximity.signed_distance(b, a.vertices)
         return -max(max(ds), max(es))
+    def distancePointLine(self, point, line):
+        A = [line[0], line[1], line[2]]
+        B = [line[3], line[4], line[5]]
+        XA = self.vectorDifference(point, A)
+        XB = self.vectorDifference(point, B)
+        cross = [XA[1]*XB[2]-XA[2]*XB[1], XA[2]*XB[0]-XA[0]*XB[2], XA[0]*XB[1]-XA[1]*XB[0]]
+        return self.vectorNorm(cross)/self.vectorNorm(self.vectorDifference(A, B))
     def volumeInclusion(self, volumeA, volumeB):
         d = self.distanceFromInterior(volumeA.vertices, volumeB)
         nF = 0.5*(self.boundaryBoxDiameter(self.volumeBounds(volumeA)) + self.boundaryBoxDiameter(self.volumeBounds(volumeB)))

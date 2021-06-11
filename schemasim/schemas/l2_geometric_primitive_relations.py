@@ -93,6 +93,87 @@ class NoContact(ContactDependentRelation):
             d = 0.0
         return (d > refD), d/(refD+d)
 
+class PointLineRelation(GeometricPrimitiveRelation):
+    def __init__(self, line=None, point=None, volume=None):
+        super().__init__()
+        self._type = "PointLineRelation"
+        self._meta_type.append("PointLineRelation")
+        self._roles = {"line": line, "point": point, "volume": volume}
+    def getMovingPoint(self, sim):
+        if not sim.isExplicitSchema(self._roles["point"]):
+            return self._roles["point"].getPoint(sim)
+        return None
+    def getTargetPoint(self, sim):
+        if sim.isExplicitSchema(self._roles["point"]):
+            return self._roles["point"].getPoint(sim)
+        return None
+    def getTargetLine(self, sim):
+        if sim.isExplicitSchema(self._roles["line"]):
+            return self._roles["line"].getLine(sim)
+        return None
+    def getMovingLine(self, sim):
+        if not sim.isExplicitSchema(self._roles["line"]):
+            return self._roles["line"].getLine(sim)
+        return None
+    def _evaluateDistance(self, d, ref):
+        return True, 1.0
+    def _getRef(self):
+        ref = sim.space().translationSamplingResolution()
+        if None != self._roles["volume"]:
+            ref = sim.space().boundaryBoxDiameter(sim.space().volumeBounds(self._roles["volume"]))
+        return ref
+    def evaluateFrame(self, frameData, sim):
+        point = self._roles["point"].getPoint(sim, frameData)
+        line = self._roles["line"].getLineAtFrame(frameData, sim)
+        if (None == point) or (None == line):
+            return False, 0.0
+        d = sim.space().distancePointLine(point, line)
+        ref = self._getRef()
+        return self._evaluateDistance(d, ref)
+    def filterPD(self, rpd, sim, strictness=0.005):
+        ref = self._getRef()
+        lineMoves = False
+        point = self.getMovingPoint(sim)
+        if not point:
+            point = self.getTargetPoint(sim)
+            line = self.getMovingLine(sim)
+            lineMoves = True
+        else:
+            line = self.getTargetLine(sim)
+        if (None == line) or (None == point):
+            return rpd
+        last = sim.space().origin()
+        for c in rpd:
+            tr = sim.space().vectorDifference(c[1], last)
+            if lineMoves:
+                pA, pB = [line[0], line[1], line[2]], [line[3], line[4], line[5]]
+                pA = sim.space().vectorSum(pA, tr)
+                pB = sim.space().vectorSum(pB, tr)
+                line = [pA[0], pA[1], pA[2], pB[0], pB[1], pB[2]]
+            else:
+                point = sim.space().vectorSum(point, tr)
+            c[0] = c[0]*self._evaluateDistance(d, ref)[1]
+            last = c[1]
+        return rpd
+
+class PointCloseToLine(PointLineRelation):
+    def __init__(self, line=None, point=None, volume=None):
+        super().__init__(line=line, point=point, volume=volume)
+        self._type = "PointCloseToLine"
+        self._meta_type.append("PointCloseToLine")
+    def _evaluateDistance(self, d, ref):
+        score = ref/(ref+d)
+        return (0.9 < score), score
+
+class PointFarFromLine(PointLineRelation):
+    def __init__(self, line=None, point=None, volume=None):
+        super().__init__(line=line, point=point, volume=volume)
+        self._type = "PointCloseToLine"
+        self._meta_type.append("PointCloseToLine")
+    def _evaluateDistance(self, d, ref):
+        score = d/(ref+d)
+        return (0.9 < score), score
+
 class PointRelation(GeometricPrimitiveRelation):
     def __init__(self, a=None, b=None):
         super().__init__()

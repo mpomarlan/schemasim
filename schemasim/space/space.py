@@ -225,6 +225,8 @@ class Space:
         return None
     def distanceFromInterior(self, points, volume):
         return None
+    def distancePointLine(self, point, line):
+        return None
     def outerAreaFromSurface(self, sa, sb):
         return None
     def cubeExtents(self, halfSide):

@@ -83,6 +83,23 @@ class PointPrimitive(GeometricPrimitive):
     def getPrimitive(self, sim):
         return self.getPoint(sim)
 
+class LinePrimitive(GeometricPrimitive):
+    def __init__(self, obj=None, line=None):
+        super().__init__()
+        self._type = "LinePrimitive"
+        self._meta_type.append("LinePrimitive")
+        self._roles = {"obj": obj, "line": line}
+    def getPrimitive(self, sim):
+        return self.getLine(sim)
+    def getLine(self, sim):
+        self._querySemanticEntry(self._roles["line"], None, sim)
+    def getLineAtFrame(self, frameData, sim):
+        line = self.getLine(sim)
+        objectFrame = frameData[self._roles["obj"].getId()]
+        a = sim.space().transformVector([line[0], line[1], line[2]], sim.space().translationVector(objectFrame), sim.rotationRepresentation(objectFrame))
+        b = sim.space().transformVector([line[3], line[4], line[5]], sim.space().translationVector(objectFrame), sim.rotationRepresentation(objectFrame))
+        return [a[0], a[1], a[2], b[0], b[1], b[2]]
+
 class AxisPrimitive(GeometricPrimitive):
     def __init__(self):
         super().__init__()

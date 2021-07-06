@@ -316,6 +316,17 @@ class Space:
         return None
     def makeRayVolumeIntersector(self, volume):
         return None
+    def translationInterpolations(self, source, destination, steps):
+        if not steps:
+            return source
+        direction = self.vectorDifference(destination, source)
+        increment = self.vectorScale(1.0/(steps), direction)
+        retq = [source]
+        for k in range(1,steps):
+            retq.append(self.vectorSum(retq[k-1], increment))
+        return retq
+    def rotationInterpolations(self, source, destination, steps):
+        return None
     def _sample(self, boundingBoxRadius):
         retq = []
         for k in list(range(self.dof())):

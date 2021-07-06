@@ -247,6 +247,9 @@ class Space2D(space.Space):
         elif -math.pi > alpha:
             alpha = alpha + 2*math.pi
         return [self.transformVector(transformB[0], transformA[0], transformA[1]), [alpha]]
+    def rotationInterpolations(self, source, destination, steps):
+        # TODO: 
+        return None
     def transformVector(self, vector, translation, orientation):
         return transform2DVector(vector, translation, orientation)
     def translateVector(self, vector, translation):

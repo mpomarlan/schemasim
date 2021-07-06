@@ -199,6 +199,22 @@ class Space3D(space.Space):
         d = self.distanceFromInterior(volumeA.vertices, volumeB)
         nF = 0.5*(self.boundaryBoxDiameter(self.volumeBounds(volumeA)) + self.boundaryBoxDiameter(self.volumeBounds(volumeB)))
         return (0.2 > (d/nF))
+    def rotationInterpolations(self, source, destination, steps):
+        if not steps:
+            return source
+        sx, sy, sz, sw = source[0], source[1], source[2], source[3]
+        dx, dy, dz, dw = destination[0], destination[1], destination[2], destination[3]
+        omega = math.acos(sw*dw + sx*dx + sy*dy +sz*dz)
+        if 0.000001 > omega:
+            return [source for k in range(steps)]
+        so = math.sin(omega)
+        retq = []
+        for k in range(steps):
+            t = (1.0*k)/(1.0*steps)
+            cs = math.sin((1.0 - t)*omega)/so
+            cd = math.sin(t*omega)/so
+            retq.append([cs*sx + cd*dx, cs*sy + cd*dy, cs*sz + cd*dz, cs*sw + cd*dw])
+        return retq
     def distanceFromInterior(self, points, volume):
         if not volume.is_watertight:
             return self.boundaryBoxDiameter(self.volumeBounds(volume))
@@ -211,7 +227,7 @@ class Space3D(space.Space):
                 dists.append(0.0)
             else:
                 closest, distance, triangle_id = trimesh.proximity.closest_point(volume, [p])
-                dists.append(distance)
+                dists.append(distance[0])
         return sum(dists)/len(dists)
     def outerAreaFromSurface(self, sa, sb):
         return outerAreaFromSurface(sa, sb, self._translationSamplingResolution*0.1, 2*self._translationSamplingResolution)

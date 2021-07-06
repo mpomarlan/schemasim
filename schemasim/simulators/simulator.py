@@ -217,11 +217,11 @@ class Simulator:
                 return True
             k = k + 1
         return False
-    def parameterizeObject(self, obj, constraintSchemas, collisionManager):
+    def parameterizeObject(self, obj, constraintSchemas, collisionManager, hasCollision=1, isKinematic=0):
         # TODO: make it so that particle positions also get checked by main object translation constraints
         # These can be adjusted later once the scene is initialized, to process expectations
-        obj._parameters['has_collision'] = 1
-        obj._parameters['is_kinematic'] = 0
+        obj._parameters['has_collision'] = hasCollision
+        obj._parameters['is_kinematic'] = isKinematic
         densityMapConstraints = self._initializeConstraintList()
         for s in constraintSchemas:
             if s._type in ["AxisAlignment", "AxisCounterAlignment", "AxisOrthogonality", "SurfaceContainment"]:
@@ -229,9 +229,17 @@ class Simulator:
             if s._type in ["PointInVolume", "SurfaceContainment", "PointCloseToLine", "PointFarFromLine", "PointProximity", "PointDistance", "VolumeAboveVolume", "VolumeBelowVolume", "Contact", "NoContact"]:
                 densityMapConstraints["translation"].append(s)
                 densityMapConstraints["particle_region_position"].append(s)
-            if s._type in ["Heavy"]:
+            if s._type in ["Heavy", "Lightweight", "VeryHeavy", "VeryLightweight"]:
                 densityMapConstraints["mass"].append(s)
-            if s._type in ["Plentiful", "Scarce"]:
+            if s._type in ["Elastic", "VeryElastic", "Inelastic", "VeryInelastic"]:
+                densityMapConstraints["restitution"].append(s)
+            if s._type in ["Frictious", "Slippery", "VeryFrictious", "VerySlippery"]:
+                densityMapConstraints["friction"].append(s)
+            if s._type in []:
+                densityMapConstraints["linear_damping"].append(s)
+            if s._type in []:
+                densityMapConstraints["angular_damping"].append(s)
+            if s._type in ["Plentiful", "Scarce", "VeryPlentiful", "VeryScarce"]:
                 densityMapConstraints["particle_num"].append(s)
         # Begin by selecting a mesh ...
         self._assignMesh(obj, densityMapConstraints["mesh"], self._getMeshPD(densityMapConstraints["mesh"]))

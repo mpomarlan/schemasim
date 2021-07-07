@@ -8,9 +8,7 @@ import trimesh
 
 import schemasim.space.space as space
 
-from schemasim.util.geometry import volumeInclusion
-
-from schemasim.util.geometry import centroid, poseFromTQ, scaleMatrix, flipMatrix, transformVector, fibonacci_sphere, distanceFromInterior, outerAreaFromSurface
+from schemasim.util.geometry import centroid, poseFromTQ, scaleMatrix, flipMatrix, transformVector, fibonacci_sphere, outerAreaFromSurface
 from schemasim.util.probability_density import normalizePD, samplePD, uniformQuaternionRPD, uniformBoxRPD
 
 class DummyCollisionManager():
@@ -121,6 +119,10 @@ class Space3D(space.Space):
         if not path:
             return None
         mesh = trimesh.load(path)
+        mesh.process()
+        mesh.remove_duplicate_faces()
+        mesh.remove_degenerate_faces()
+        mesh.fix_normals()
         if adjustments:
             if (("translation" in adjustments) and (None!=adjustments["translation"])) or (("rotation" in adjustments) and (None!=adjustments["rotation"])):
                 translation = self.nullVector()
@@ -140,8 +142,10 @@ class Space3D(space.Space):
         return ".sem3D"
     def volumePathModifier(self):
         return ".stl"
-    def volumeInteriorPathModifier(self):
-        return "_interior.stl"
+    def volumePartPathModifier(self, part):
+        if not part:
+            part = ""
+        return ("_%s.stl" % part)
     def dof(self):
         return 3
     def axes(self):
@@ -180,10 +184,51 @@ class Space3D(space.Space):
         return volume.apply_translation(translation)
     def poseFromTR(self, translation, rotation):
         return poseFromTQ(translation, rotation)
+    def distanceBetweenObjects(self, a, b):
+        ds = trimesh.proximity.signed_distance(a, b.vertices)
+        es = trimesh.proximity.signed_distance(b, a.vertices)
+        return -max(max(ds), max(es))
+    def distancePointLine(self, point, line):
+        A = [line[0], line[1], line[2]]
+        B = [line[3], line[4], line[5]]
+        XA = self.vectorDifference(point, A)
+        XB = self.vectorDifference(point, B)
+        cross = [XA[1]*XB[2]-XA[2]*XB[1], XA[2]*XB[0]-XA[0]*XB[2], XA[0]*XB[1]-XA[1]*XB[0]]
+        return self.vectorNorm(cross)/self.vectorNorm(self.vectorDifference(A, B))
     def volumeInclusion(self, volumeA, volumeB):
-        return volumeInclusion(volumeA, volumeB)
-    def distanceFromInterior(self, point, volume, volumeRayIntersector):
-        return 2.0*distanceFromInterior(point, volume, volumeRayIntersector)/self.boundaryBoxDiameter(self.volumeBounds(volume))
+        d = self.distanceFromInterior(volumeA.vertices, volumeB)
+        nF = 0.5*(self.boundaryBoxDiameter(self.volumeBounds(volumeA)) + self.boundaryBoxDiameter(self.volumeBounds(volumeB)))
+        return (0.2 > (d/nF))
+    def rotationInterpolations(self, source, destination, steps):
+        if not steps:
+            return source
+        sx, sy, sz, sw = source[0], source[1], source[2], source[3]
+        dx, dy, dz, dw = destination[0], destination[1], destination[2], destination[3]
+        omega = math.acos(sw*dw + sx*dx + sy*dy +sz*dz)
+        if 0.000001 > omega:
+            return [source for k in range(steps)]
+        so = math.sin(omega)
+        retq = []
+        for k in range(steps):
+            t = (1.0*k)/(1.0*steps)
+            cs = math.sin((1.0 - t)*omega)/so
+            cd = math.sin(t*omega)/so
+            retq.append([cs*sx + cd*dx, cs*sy + cd*dy, cs*sz + cd*dz, cs*sw + cd*dw])
+        return retq
+    def distanceFromInterior(self, points, volume):
+        if not volume.is_watertight:
+            return self.boundaryBoxDiameter(self.volumeBounds(volume))
+        if 0 == len(points):
+            return 0.0
+        contains = volume.contains(points)
+        dists = []
+        for c, p in zip(contains, points):
+            if c:
+                dists.append(0.0)
+            else:
+                closest, distance, triangle_id = trimesh.proximity.closest_point(volume, [p])
+                dists.append(distance[0])
+        return sum(dists)/len(dists)
     def outerAreaFromSurface(self, sa, sb):
         return outerAreaFromSurface(sa, sb, self._translationSamplingResolution*0.1, 2*self._translationSamplingResolution)
     def cubeExtents(self, halfSide):

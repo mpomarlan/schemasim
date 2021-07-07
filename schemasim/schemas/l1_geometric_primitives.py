@@ -83,6 +83,23 @@ class PointPrimitive(GeometricPrimitive):
     def getPrimitive(self, sim):
         return self.getPoint(sim)
 
+class LinePrimitive(GeometricPrimitive):
+    def __init__(self, obj=None, line=None):
+        super().__init__()
+        self._type = "LinePrimitive"
+        self._meta_type.append("LinePrimitive")
+        self._roles = {"obj": obj, "line": line}
+    def getPrimitive(self, sim):
+        return self.getLine(sim)
+    def getLine(self, sim):
+        self._querySemanticEntry(self._roles["line"], None, sim)
+    def getLineAtFrame(self, frameData, sim):
+        line = self.getLine(sim)
+        objectFrame = frameData[self._roles["obj"].getId()]
+        a = sim.space().transformVector([line[0], line[1], line[2]], sim.space().translationVector(objectFrame), sim.rotationRepresentation(objectFrame))
+        b = sim.space().transformVector([line[3], line[4], line[5]], sim.space().translationVector(objectFrame), sim.rotationRepresentation(objectFrame))
+        return [a[0], a[1], a[2], b[0], b[1], b[2]]
+
 class AxisPrimitive(GeometricPrimitive):
     def __init__(self):
         super().__init__()
@@ -277,26 +294,26 @@ class Centroid(PointPrimitive):
         self._meta_type.append("Centroid")
         self._roles = {"obj": obj}
 
-class Interior(GeometricPrimitive):
+class VolumePrimitive(GeometricPrimitive):
     def __init__(self, obj=None):
         super().__init__()
-        self._type = "Interior"
-        self._meta_type.append("Interior")
-        self._roles = {"obj": obj}
+        self._type = "VolumePrimitive"
+        self._meta_type.append("VolumePrimitive")
+        self._roles = {"obj": obj, "volume": ""}
     def _getMeshPathModifier(self, sim):
-        return sim.space().volumeInteriorPathModifier()
+        return sim.space().volumePartPathModifier(self._roles["volume"])
     def getVolumeBounds(self, sim):
-        interior = self._getVolumeInternal(sim)
-        if not interior:
+        volume = self._getVolumeInternal(sim)
+        if not volume:
             return None, None, None
         t, r = self._getTransformInternal(sim)
-        return sim.space().volumeBounds(interior), t, r
+        return sim.space().volumeBounds(volume), t, r
     def getVolume(self, sim):
-        interior = self._getVolumeInternal(sim)
-        if not interior:
+        volume = self._getVolumeInternal(sim)
+        if not volume:
             return None
         t, r = self._getTransformInternal(sim)
-        return sim.space().transformVolume(interior, t, r)
+        return sim.space().transformVolume(volume, t, r)
     def getVolumeAtFrame(self, frameData, frame, sim):
         if 0 == frame:
             return self.getVolume(sim)
@@ -307,4 +324,18 @@ class Interior(GeometricPrimitive):
         return sim.space().transformVolume(volume, t, r)
     def getPrimitive(self, sim):
         return self.getVolume(sim)
+
+class Interior(VolumePrimitive):
+    def __init__(self, obj=None):
+        super().__init__()
+        self._type = "Interior"
+        self._meta_type.append("Interior")
+        self._roles = {"obj": obj, "volume": "interior"}
+
+class FunctionalPart(VolumePrimitive):
+    def __init__(self, obj=None, part=None):
+        super().__init__()
+        self._type = "FunctionalPart"
+        self._meta_type.append("FunctionalPart")
+        self._roles = {"obj": obj, "volume": part}
 

@@ -59,15 +59,29 @@ class PhysicsSimulator(simulator.Simulator):
     def _getPhysicsTypePD(self, constraints):
         return [[1.0, "rigid_body"]]
     def _getMassPD(self, constraints):
-        return None
+        retq = None
+        if constraints:
+            mass = max(0.01, constraints[0].getReferenceValue())
+            retq = [[1.0, x] for x in np.arange(mass*(1.0/10.0), mass*30.0, mass/10.0)]
+            for c in constraints:
+                retq = c.filterPD(retq, self)
+        return retq
     def _getRestitutionPD(self, constraints):
-        return None
+        retq = None
+        if constraints:
+            retq = [[1.0, x] for x in np.arange(0.0, 1.0, 0.01)]
+            for c in constraints:
+                retq = c.filterPD(retq, self)
+        return retq
     def _getFrictionPD(self, constraints):
-        return None
+        # Also a [0,1]-limited value so will reuse code for now.
+        return self._getRestitutionPD(constraints)
     def _getLinDmpPD(self, constraints):
-        return None
+        # Also a [0,1]-limited value so will reuse code for now.
+        return self._getRestitutionPD(constraints)
     def _getAngDmpPD(self, constraints):
-        return None
+        # Also a [0,1]-limited value so will reuse code for now.
+        return self._getRestitutionPD(constraints)
 
     def isExplicitObject(self, obj):
         if obj._parameters["physics_type"] in ["rigid_body", "soft_body"]:

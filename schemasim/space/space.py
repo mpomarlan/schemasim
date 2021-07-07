@@ -156,7 +156,7 @@ class Space:
         return None
     def volumePathModifier(self):
         return None
-    def volumeInteriorPathModifier(self):
+    def volumePartPathModifier(self, part):
         return None
     def dof(self):
         return None
@@ -223,7 +223,9 @@ class Space:
         return None
     def volumeInclusion(self, volumeA, volumeB):
         return None
-    def distanceFromInterior(self, point, volume, volumeRayIntersector):
+    def distanceFromInterior(self, points, volume):
+        return None
+    def distancePointLine(self, point, line):
         return None
     def outerAreaFromSurface(self, sa, sb):
         return None
@@ -257,6 +259,8 @@ class Space:
         minP = [x[0] for x in bbox]
         maxP = [x[1] for x in bbox]
         return self.vectorNorm(self.vectorDifference(minP, maxP))
+    def distanceBetweenObjects(self, a, b):
+        return None
     def orthogonalBasis(self, vector):
         dots = [(math.fabs(self.vectorDotProduct(vector, x)), x) for x in self.axes()]
         axes = [x[1] for x in sorted(dots, key=lambda y: y[0])[:-1]]
@@ -311,6 +315,17 @@ class Space:
     def makeCollisionManager(self):
         return None
     def makeRayVolumeIntersector(self, volume):
+        return None
+    def translationInterpolations(self, source, destination, steps):
+        if not steps:
+            return source
+        direction = self.vectorDifference(destination, source)
+        increment = self.vectorScale(1.0/(steps), direction)
+        retq = [source]
+        for k in range(1,steps):
+            retq.append(self.vectorSum(retq[k-1], increment))
+        return retq
+    def rotationInterpolations(self, source, destination, steps):
         return None
     def _sample(self, boundingBoxRadius):
         retq = []

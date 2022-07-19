@@ -330,6 +330,8 @@ def checkSceneExpectations(schemas, simulator, simulationLogPath, condition=Defa
     return retq, frameData
 
 def interpretScene(schemas, simulator, simulate_counterfactuals=True, render=False, nframes=250, sceneFolder=None, trajectories=None):
+    if None == trajectories:
+        trajectories = {}
     simPath = simulator.getPath()
     if not simPath:
         print("No path known to simulator; make sure environment variable %s is set" % simulator.getPathEnvironmentVariable())
